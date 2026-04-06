@@ -410,3 +410,289 @@ U_t = -\alpha \tilde{A}_t - \beta \tilde{V}_t
 > 我们已经证明：Random backbone 本身具备局部顺序判别和局部顺序修正能力；当前的主要瓶颈不再是“有没有顺序信号”，而是“什么样的 signal 能把这些局部顺序信息组织成更前置、更连续、近似 l2r 的全局顺序”。因此，下一步最合理的方向是先在 swap/search 实验中筛选 signal，再将筛选出的 signal 传播到 order head 训练中。
 
 ---
+
+## 14. 最新阶段进展：Block32、AR-likeness 与候选池排序实验
+
+在 16-block 设置下，许多现象已经比较清楚，但仍存在一个疑问：
+
+> 当前 block 粒度是否过粗，以至于一些 trajectory signal 太容易被任务简化效应掩盖？
+
+因此后续引入了 **32-block 设置**：
+
+- 序列长度仍为 256
+- `block_len = 8`
+- 一共 `32` 个 block
+- block 内部仍固定为 l2r
+
+这样做的目的是：
+
+1. 让顺序问题比 16-block 更细粒度  
+2. 保留 block-level 的稳定性  
+3. 检查 AR / Random 差异是否在更细粒度下更明显  
+
+---
+
+### 14.1 AR-likeness score：在 random checkpoint 内部比较 AR mode 与 Random mode
+
+后续引入了一个新的诊断问题：
+
+> 在**同一个 random checkpoint** 下，只切换 `mode=AR` 和 `mode=Random`，能否仅依靠 trajectory 统计量稳定地区分两者？
+
+这里定义了一组 early-trajectory component：
+
+1. `area`
+   - 前若干步 reveal loss 的平均值
+   - 代表“前期整体是否更低”
+2. `slope`
+   - `L_1 - L_K`
+   - 代表“前期下降是否更快”
+3. `variance`
+   - 前若干步 loss 本身的方差
+   - 代表“点相对均值是否分散”
+4. `total variation`
+   - 相邻 step loss 差值绝对值之和
+   - 代表“曲线是否平滑、是否带 staircase 感”
+5. `late_drop`
+   - early 末步到全 trajectory 末步之间仍发生多少下降
+   - 代表“改善是否被拖到后半段”
+
+在 `block32`、`200 batches` 平均的设定下，`AR-likeness` 结果明显比 16-block 更强：
+
+- 在 random-only checkpoint 上，`AR mode` 与 `Random mode` 已经可以被更稳定地区分
+- 最有用的项不再是单独的 `variance`
+- 更有效的组合变成：
+  - `area`
+  - `slope`
+  - 尤其是 `area + slope`
+
+这说明：
+
+> 当 block 粒度变细后，AR 的“前期更快组织上下文”的优势在同一个 random backbone 中会更明显地显现出来。
+
+但另一方面，后续 search benchmark 也说明：
+
+> “能区分 AR 与 Random trajectory” 不等于 “直接把 random order 推回近似 l2r”。  
+> 也就是说，AR-likeness score 作为诊断量是有效的，但直接作为 search signal 时仍不够稳定。
+
+---
+
+### 14.2 候选池排序实验：这些 trajectory 指标是否真的偏好 l2r？
+
+为了更直接回答“这些指标到底会不会偏好 l2r”，后续设计了一个更严格的候选池实验：
+
+- 固定一个 `block32 random checkpoint`
+- 固定一个候选池：
+  - 多个 random block orders
+  - 再额外加入 `l2r`
+- 对每个候选顺序，在 `200 batches` 上取平均分
+- 然后看 `l2r` 在不同指标下的排名
+
+最关键的一轮配置为：
+
+- `block32`
+- `batch_size = 64`
+- `num_batches = 200`
+- `256 random candidates + 1 l2r candidate`
+
+结果非常关键：
+
+- `l2r` 在 `area` 下排第 1
+- `l2r` 在 `slope` 下排第 12
+- `l2r` 在 `variance` 下排第 216
+- `l2r` 在 `total_variation` 下排第 1
+- `l2r` 在 `late_drop` 下排第 4
+- `l2r` 在 `area_plus_slope` 下排第 1
+- `l2r` 在 `area_plus_tv` 下排第 1
+
+这个结果说明了两件很重要的事：
+
+1. **这些指标并不是和 l2r 无关**
+   - 相反，在更大的候选池中，`l2r` 在多个关键指标下依然能排在最前面
+
+2. **不同“波动类”指标含义完全不同**
+   - `variance` 差，并不表示 AR 不稳定
+   - 它只是说明 AR 在前 8 步下降很快，因此点相对均值更分散
+   - `total_variation` 高，则说明 AR 的前期下降虽然幅度大，但相邻步之间更平滑、更连续
+
+因此现在可以更明确地说：
+
+> `variance` 不适合作为主信号；  
+> 真正更接近“AR 优点”的是：
+> - `area`
+> - `total_variation`
+> - `late_drop`
+> - 以及组合指标 `area_plus_tv`
+
+换句话说：
+
+> AR 的优势更像是“前期更低、更平滑、且改善不被拖到后段”，  
+> 而不是单纯“方差更小”。
+
+---
+
+### 14.2 补充：完整顺序（full-order）评分实验
+
+后续又将同一候选池实验扩展为同时计算：
+
+- `early_*` 指标：只看前 `25%` block reveal steps
+- `full_*` 指标：看完整 `32` 个 block steps 的整条 trajectory
+
+设置保持不变：
+
+- `block32`
+- `256 random candidates + 1 l2r candidate`
+- `200 batches`
+- `batch_size = 64`
+
+在这组 full-order 指标下，`l2r` 的排名为：
+
+- `full_area`: 第 `1`
+- `full_slope`: 第 `248`
+- `full_variance`: 第 `1`
+- `full_total_variation`: 第 `1`
+- `full_max_step_jump`: 第 `1`
+- `full_area_plus_tv`: 第 `1`
+- `full_area_plus_slope`: 第 `234`
+
+这个结果很关键，因为它说明：
+
+1. `l2r` 的优势并不只存在于前 `25%` 的 early window  
+2. 在完整 trajectory 上，`l2r` 依然会被“低 + 稳”类指标稳定排到最前  
+3. 真正不稳定、容易误导的依然是 `slope` 一类指标
+
+但这里要特别注意两个解释上的区别。
+
+#### (1) `full_area` 的含义
+
+`full_area` 排第 1，**并不等于**“AR 在每个阶段都同样更低”，也不等于“它的优势机制和 early area 完全一样”。
+
+更准确地说：
+
+- `early_area` 低，主要表示 AR 在前期更快组织上下文，因此前几步 loss 更低
+- `full_area` 低，则表示 **把整条 trajectory 平均起来以后**，AR 的整体 loss 仍然更低
+
+这里面当然包含了一个重要原因：
+
+- Random 在前期 loss 很高，确实会把 full-area 拉大很多
+
+所以：
+
+> `full_area` 更像是“整条轨迹的平均质量更好”，  
+> 而不是“AR 在 full window 上和 early window 里靠同一种机制获胜”。
+
+换句话说，`full_area` 的结果支持：
+
+- AR 的前期优势足够强
+- 强到即使后期 Random 可能更低，整条轨迹平均下来 AR 依然更优
+
+#### (2) `early_total_variation` 和 `full_total_variation` 都低，但原因不完全一样
+
+这也是一个很重要的区分。
+
+`early_total_variation` 低，主要表示：
+
+- AR 在前期虽然下降快
+- 但相邻 reveal step 之间的变化更连续、更平滑
+- 没有 Random 那种明显的 staircase / delayed-release 结构
+
+所以 early-TV 低更像是：
+
+> **前期组织过程更顺滑**
+
+而 `full_total_variation` 低，除了包含上述原因之外，更重要的还在于：
+
+- AR 更早进入平台期
+- 后续很多 step 的变化已经变得很小
+- 因此整条曲线累计起来的总变化量也更低
+
+所以 full-TV 低更像是：
+
+> **前期平滑 + 更早到达平台期**
+
+也就是说：
+
+- `early_tv` 主要刻画“前期怎么下降”
+- `full_tv` 则同时刻画“前期怎么下降”以及“之后多久进入稳定平台”
+
+因此我们现在可以更细地表述 AR 的优势：
+
+> AR 的优势并不是单一的“更低”或“更稳”，  
+> 而是：
+> - 前期更快建立有效上下文
+> - 前期下降更连续、更少 staircase
+> - 并且更早进入稳定平台期
+
+---
+
+### 14.3 研究结论的进一步收敛
+
+经过 block32 和大候选池实验后，现在已经可以区分两类结论：
+
+#### 已经基本证明的事情
+
+1. 仅从 AR / Random trajectory 差异中抽取出的统计性质，**确实包含会偏好 l2r 的 signal**
+2. 这些 signal 不需要显式给出 l2r label，依然会在大样本平均意义上把 l2r 排到前面
+3. 最可信的 signal family 已经逐渐收敛到：
+   - early area
+   - total variation
+   - late-drop penalty
+   - 以及 `area + stability` 组合
+
+#### 还没有完全证明的事情
+
+1. 这些 signal 是否已经足以让一个训练好的 random backbone **事后** recover 到近似 l2r
+2. 这些 signal 如何在训练中被稳定传播，进而真正改变 backbone 的 order bias
+
+所以当前最合理的表述是：
+
+> 我们已经证明了 signal validity，  
+> 但 training propagation 仍需进一步验证。
+
+---
+
+## 15. order head 角色的重新定义：从 utility ranker 到 preference module
+
+上述结果还带来了另一个重要变化：
+
+> `order head` 不应再被理解为“直接恢复最终全局顺序”的模块，  
+> 而更适合作为一个“顺序偏好模块（preference module）”。
+
+原因是：
+
+- 直接从 noisy residual utility 回归 block rank，容易被 late easy block 欺骗
+- 直接让它输出全局近似 l2r 顺序，任务过重
+- 但让它学习“候选顺序 A 是否优于候选顺序 B”，则更符合当前证据
+
+因此，当前代码已经开始改成：
+
+1. 对一个样本采样多个 candidate orders
+2. 用 early-shaping quality 比较这些候选
+3. 选出 `preferred order` 与 `other order`
+4. 让 order head 学习：
+   - preferred 的 prefix 概率要高于 other
+
+这意味着：
+
+- `order head` 不再是 utility regressor
+- 而是 **pairwise order preference learner**
+- 它的角色更像：
+  - order sampler
+  - proposal distribution learner
+  - curriculum controller
+
+一句话总结就是：
+
+> 不是不要 order head，  
+> 而是要把它从“最终顺序恢复器”改成“训练过程中逐步引导 order 分布的偏好模块”。
+
+---
+
+## 16. 当前阶段的综合结论
+
+到目前为止，这条研究线已经收敛出一个比较清晰的结论：
+
+> 我们并不需要直接把 l2r 当作 teacher label；  
+> 只要从 AR / Random trajectory 的统计差异中抽取出“前期更低、更平滑、且改善不拖到后段”的性质，这些性质本身就已经足以在大样本平均意义上显著偏好 l2r。  
+> 因此，下一阶段的关键问题不再是“有没有这样的信号”，而是“如何把这些信号以 preference / curriculum 的方式稳定传播到训练过程中，让模型逐步形成偏向 l2r 的 order policy”。
+
+---

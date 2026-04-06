@@ -1,0 +1,18 @@
+{
+  "ckpt_path": "out/out-wikitext103-random-b32/ckpt.pt",
+  "dataset": "wikitext103",
+  "split": "val",
+  "batch_size": 64,
+  "num_batches": 200,
+  "num_candidates": 256,
+  "includes_l2r_candidate": true,
+  "top_k": 15,
+  "num_blocks": 32,
+  "early_k": 8,
+  "tv_weight": 0.3,
+  "late_drop_weight": 0.2,
+  "seed": 12345,
+  "device": "cuda",
+  "dtype": "bfloat16",
+  "note": "Each leaderboard ranks a fixed candidate pool of random orders plus l2r by the mean metric value over all evaluated batches. Metrics are provided in both early_* form (first 25% of block reveal steps) and full_* form (the full block order trajectory). If l2r is outside top_k, rows are extended until l2r appears."
+}

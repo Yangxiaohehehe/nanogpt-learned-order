@@ -1,8 +1,0 @@
-[
-  {
-    "checkpoint": "out-wikitext103-random",
-    "best_score_name": "area_slope_variance",
-    "best_ar_win_rate": 0.5720312595367432,
-    "best_margin_mean": 0.3112810254096985
-  }
-]

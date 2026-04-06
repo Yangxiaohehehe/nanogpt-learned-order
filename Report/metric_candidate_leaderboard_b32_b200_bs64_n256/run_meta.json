@@ -1,0 +1,16 @@
+{
+  "ckpt_path": "out/out-wikitext103-random-b32/ckpt.pt",
+  "dataset": "wikitext103",
+  "split": "val",
+  "batch_size": 64,
+  "num_batches": 200,
+  "num_candidates": 256,
+  "includes_l2r_candidate": true,
+  "top_k": 15,
+  "num_blocks": 32,
+  "early_k": 8,
+  "seed": 12345,
+  "device": "cuda",
+  "dtype": "bfloat16",
+  "note": "Each leaderboard ranks a fixed candidate pool of random orders plus l2r by the mean metric value over all evaluated batches. If l2r is outside top_k, rows are extended until l2r appears."
+}

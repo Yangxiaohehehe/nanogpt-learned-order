@@ -1,0 +1,70 @@
+{
+  "experiment": "prefix_only",
+  "run_meta": {
+    "ckpt_path": "out/out-wikitext103-random-b32/ckpt.pt",
+    "dataset": "wikitext103",
+    "split": "val",
+    "batch_size": 64,
+    "num_batches": 150,
+    "prefix_len": 8,
+    "beam_width": 4,
+    "expand_candidates": 8,
+    "rollout_repeats": 4,
+    "prefix_eval_window": 8,
+    "suffix_eval_window": 8,
+    "tv_weight": 0.3,
+    "suffix_prefix_source": "random"
+  },
+  "summaries": {
+    "best_prefix_or_order": {
+      "name": "best",
+      "num_samples": 9600,
+      "mean_prefix_mean_index": 15.472734375,
+      "mean_adjacent_pairs": 1.0502083333333334,
+      "mean_longest_run": 1.6832291666666668,
+      "mean_kendall_tau": 0.0038970093821020175,
+      "mean_kendall_distance": 0.498051495308949,
+      "mean_area_plus_tv": -4.688505439683795
+    },
+    "random_baseline": {
+      "name": "random",
+      "num_samples": 9600,
+      "mean_prefix_mean_index": 15.490885416666666,
+      "mean_adjacent_pairs": 0.9717708333333334,
+      "mean_longest_run": 1.6473958333333334,
+      "mean_kendall_tau": 0.0023437500294918815,
+      "mean_kendall_distance": 0.4988281249852541,
+      "mean_area_plus_tv": -7.583057793503007
+    },
+    "l2r_reference": {
+      "name": "l2r",
+      "num_samples": 9600,
+      "mean_prefix_mean_index": 3.5,
+      "mean_adjacent_pairs": 31.0,
+      "mean_longest_run": 32.0,
+      "mean_kendall_tau": 1.0,
+      "mean_kendall_distance": 0.0,
+      "mean_area_plus_tv": -7.070643246906499
+    },
+    "prefix_view": {
+      "name": "prefix_view",
+      "num_samples": 9600,
+      "mean_prefix_mean_index": 15.472734375,
+      "mean_adjacent_pairs": 0.2835416666666667,
+      "mean_longest_run": 1.259375,
+      "mean_kendall_tau": 0.008028273996897041,
+      "mean_kendall_distance": 0.49598586300155145,
+      "mean_area_plus_tv": -4.688505439683795
+    },
+    "suffix_view": {
+      "name": "suffix_view",
+      "num_samples": 9600,
+      "mean_prefix_mean_index": 15.509088541666667,
+      "mean_adjacent_pairs": 0.7357291666666667,
+      "mean_longest_run": 1.5402083333333334,
+      "mean_kendall_tau": 0.0038970093821020175,
+      "mean_kendall_distance": 0.498051495308949,
+      "mean_area_plus_tv": -7.664714029779037
+    }
+  }
+}

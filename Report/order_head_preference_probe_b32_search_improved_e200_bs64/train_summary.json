@@ -1,0 +1,8 @@
+{
+  "mean_preference_loss": 0.6905183407664299,
+  "mean_preference_accuracy": 0.359453125,
+  "mean_preference_gap": 0.5761412440240383,
+  "mean_tie_break_gap": 0.5113347946107387,
+  "mean_preferred_signal": -6.93158411026001,
+  "mean_other_signal": -7.5077253079414366
+}

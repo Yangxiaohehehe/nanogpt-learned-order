@@ -35,12 +35,13 @@ from order_utils import (
     build_prefix_policy_block_orders,
     compute_order_entropy,
     compute_block_residual_utilities,
+    compute_early_shaping_preference_quality,
     compute_prefix_auc,
     expand_block_orders_to_token_orders,
     evaluate_block_order_quality,
     greedy_adjacent_swap_search,
     kendall_tau_to_l2r,
-    listwise_block_order_loss,
+    pairwise_order_preference_loss,
     prefix_position_stats,
     sample_random_block_orders,
     scatter_block_utilities_to_original_positions,
@@ -112,6 +113,10 @@ baseline_momentum = 0.95
 lambda_list = 0.1
 order_temperature = 1.0
 order_entropy_temperature = 1.0
+preference_num_candidates = 4
+preference_early_k = 4
+preference_tv_weight = 0.3
+preference_margin = 0.0
 swap_eval_prefix_k = 2
 swap_eval_num_steps = 3
 swap_eval_num_batches = 4
@@ -434,6 +439,49 @@ def _compute_residual_block_targets(block_losses, update_baseline=True):
 
 
 @torch.no_grad()
+def _sample_order_preference_targets(module, idx):
+    num_candidates = max(2, int(preference_num_candidates))
+    candidate_orders = sample_random_block_orders(
+        idx.size(0) * num_candidates,
+        num_blocks,
+        idx.device,
+    ).view(idx.size(0), num_candidates, num_blocks)
+    flat_orders = candidate_orders.reshape(idx.size(0) * num_candidates, num_blocks)
+    flat_idx = idx.unsqueeze(1).expand(idx.size(0), num_candidates, idx.size(1)).reshape(
+        idx.size(0) * num_candidates,
+        idx.size(1),
+    )
+    candidate_metrics = evaluate_block_order_quality(
+        module,
+        flat_idx,
+        flat_orders,
+        prefix_k=max(2, min(preference_early_k, num_blocks)),
+        block_len=block_order_block_len,
+        autocast_context=ctx,
+    )
+    candidate_block_losses = candidate_metrics["block_losses"].view(idx.size(0), num_candidates, num_blocks)
+    candidate_quality = compute_early_shaping_preference_quality(
+        candidate_block_losses.view(idx.size(0) * num_candidates, num_blocks),
+        early_k=preference_early_k,
+        tv_weight=preference_tv_weight,
+    ).view(idx.size(0), num_candidates)
+    best_idx = candidate_quality.argmax(dim=-1)
+    worst_idx = candidate_quality.argmin(dim=-1)
+    batch_indices = torch.arange(idx.size(0), device=idx.device)
+    preferred_orders = candidate_orders[batch_indices, best_idx]
+    other_orders = candidate_orders[batch_indices, worst_idx]
+    preferred_quality = candidate_quality[batch_indices, best_idx]
+    other_quality = candidate_quality[batch_indices, worst_idx]
+    return {
+        "preferred_orders": preferred_orders,
+        "other_orders": other_orders,
+        "preferred_quality": preferred_quality,
+        "other_quality": other_quality,
+        "quality_gap": preferred_quality - other_quality,
+    }
+
+
+@torch.no_grad()
 def run_local_swap_eval(module):
     """
     Greedy adjacent-swap local-search experiment.
@@ -582,49 +630,50 @@ def estimate_loss():
             entropies = torch.zeros(eval_iters)
             taus = torch.zeros(eval_iters)
             prefix_means = torch.zeros(eval_iters)
-            residual_means = torch.zeros(eval_iters)
-            residual_stds = torch.zeros(eval_iters)
+            preference_losses = torch.zeros(eval_iters)
+            preference_accs = torch.zeros(eval_iters)
+            preference_gaps = torch.zeros(eval_iters)
             for k in range(eval_iters):
                 X, Y = get_batch(split)
-                random_block_orders, _, token_losses, hidden_states = _forward_policy_features(
+                _, _, _, hidden_states = _forward_policy_features(
                     raw_model,
                     X,
-                    need_token_losses=True,
+                    need_token_losses=False,
                     track_grad=False,
                 )
                 scores = _score_policy_head(raw_model, X, hidden_states, detach_inputs=True)
-                block_losses = token_losses_to_block_losses(
-                    token_losses,
-                    block_len=block_order_block_len,
+                preference_targets = _sample_order_preference_targets(raw_model, X)
+                loss, pref_acc, _, _ = pairwise_order_preference_loss(
+                    scores,
+                    preference_targets["preferred_orders"],
+                    preference_targets["other_orders"],
+                    prefix_k=policy_prefix_k,
+                    margin=preference_margin,
                 )
-                residual_targets = _compute_residual_block_targets(block_losses, update_baseline=False)
-                block_utilities = scatter_block_utilities_to_original_positions(
-                    residual_targets["step_utilities"],
-                    random_block_orders,
-                )
-                loss = listwise_block_order_loss(scores, block_utilities, temperature=order_temperature)
                 policy_block_orders = build_prefix_policy_block_orders(scores, policy_prefix_k)
                 losses[k] = loss.item()
                 entropies[k] = compute_order_entropy(scores, temperature=order_entropy_temperature).item()
                 taus[k] = kendall_tau_to_l2r(policy_block_orders).item()
                 prefix_means[k] = policy_block_orders[:, :max(1, min(policy_prefix_k, scores.size(1)))].float().mean().item()
-                residual_means[k] = residual_targets["step_utilities"].mean().item()
-                residual_stds[k] = residual_targets["step_utilities"].std(unbiased=False).item()
+                preference_losses[k] = loss.item()
+                preference_accs[k] = pref_acc.item()
+                preference_gaps[k] = preference_targets["quality_gap"].mean().item()
             out[split] = losses.mean().item()
             out[f"{split}_order_entropy"] = entropies.mean().item()
             out[f"{split}_kendall_tau"] = taus.mean().item()
             out[f"{split}_prefix_mean_index"] = prefix_means.mean().item()
-            out[f"{split}_residual_mean"] = residual_means.mean().item()
-            out[f"{split}_residual_std"] = residual_stds.mean().item()
+            out[f"{split}_preference_loss"] = preference_losses.mean().item()
+            out[f"{split}_preference_accuracy"] = preference_accs.mean().item()
+            out[f"{split}_preference_gap"] = preference_gaps.mean().item()
         elif train_stage in ('policy_backbone', 'joint'):
             prefix_auc = torch.zeros(eval_iters)
             entropies = torch.zeros(eval_iters)
             taus = torch.zeros(eval_iters)
-            list_losses = torch.zeros(eval_iters) if train_stage == 'joint' else None
+            preference_losses = torch.zeros(eval_iters) if train_stage == 'joint' else None
+            preference_accs = torch.zeros(eval_iters) if train_stage == 'joint' else None
+            preference_gaps = torch.zeros(eval_iters) if train_stage == 'joint' else None
             ao_losses = torch.zeros(eval_iters) if train_stage == 'joint' else None
             total_losses = torch.zeros(eval_iters) if train_stage == 'joint' else None
-            residual_means = torch.zeros(eval_iters) if train_stage == 'joint' else None
-            residual_stds = torch.zeros(eval_iters) if train_stage == 'joint' else None
             for k in range(eval_iters):
                 X, Y = get_batch(split)
                 scores_for_policy, policy_block_orders, policy_token_orders, _ = _build_policy_orders_from_batch(raw_model, X, track_grad=False)
@@ -644,48 +693,41 @@ def estimate_loss():
                 entropies[k] = compute_order_entropy(scores_for_policy, temperature=order_entropy_temperature).item()
                 taus[k] = kendall_tau_to_l2r(policy_block_orders).item()
                 if train_stage == 'joint':
-                    # Weak joint evaluation: listwise supervision is measured on a separate
-                    # random rollout, while AO loss is measured under the discrete prefix policy.
-                    random_block_orders, _, random_token_losses, hidden_states = _forward_policy_features(
+                    _, _, _, hidden_states = _forward_policy_features(
                         raw_model,
                         X,
-                        need_token_losses=True,
+                        need_token_losses=False,
                         track_grad=False,
                     )
-                    random_block_losses = token_losses_to_block_losses(
-                        random_token_losses,
-                        block_len=block_order_block_len,
-                    )
-                    residual_targets = _compute_residual_block_targets(random_block_losses, update_baseline=False)
-                    block_utilities = scatter_block_utilities_to_original_positions(
-                        residual_targets["step_utilities"],
-                        random_block_orders,
-                    )
-                    scores_for_list = _score_policy_head(
+                    scores_for_pref = _score_policy_head(
                         raw_model,
                         X,
                         hidden_states,
                         detach_inputs=True,
                     )
-                    list_losses[k] = listwise_block_order_loss(
-                        scores_for_list,
-                        block_utilities,
-                        temperature=order_temperature,
-                    ).item()
+                    preference_targets = _sample_order_preference_targets(raw_model, X)
+                    pref_loss, pref_acc, _, _ = pairwise_order_preference_loss(
+                        scores_for_pref,
+                        preference_targets["preferred_orders"],
+                        preference_targets["other_orders"],
+                        prefix_k=policy_prefix_k,
+                        margin=preference_margin,
+                    )
+                    preference_losses[k] = pref_loss.item()
+                    preference_accs[k] = pref_acc.item()
+                    preference_gaps[k] = preference_targets["quality_gap"].mean().item()
                     ao_losses[k] = ao_loss.item()
-                    total_losses[k] = (ao_loss.item() + lambda_list * list_losses[k].item())
-                    residual_means[k] = residual_targets["step_utilities"].mean().item()
-                    residual_stds[k] = residual_targets["step_utilities"].std(unbiased=False).item()
+                    total_losses[k] = (ao_loss.item() + lambda_list * preference_losses[k].item())
             out[split] = losses.mean().item()
             out[f"{split}_prefix_auc"] = prefix_auc.mean().item()
             out[f"{split}_order_entropy"] = entropies.mean().item()
             out[f"{split}_kendall_tau"] = taus.mean().item()
-            if list_losses is not None:
-                out[f"{split}_listwise_loss"] = list_losses.mean().item()
+            if preference_losses is not None:
+                out[f"{split}_preference_loss"] = preference_losses.mean().item()
+                out[f"{split}_preference_accuracy"] = preference_accs.mean().item()
+                out[f"{split}_preference_gap"] = preference_gaps.mean().item()
                 out[f"{split}_ao_loss"] = ao_losses.mean().item()
                 out[f"{split}_total_loss"] = total_losses.mean().item()
-                out[f"{split}_residual_mean"] = residual_means.mean().item()
-                out[f"{split}_residual_std"] = residual_stds.mean().item()
         else:
             for k in range(eval_iters):
                 X, Y = get_batch(split)
@@ -831,8 +873,8 @@ while True:
                 f"val {losses['val_kendall_tau']:.4f}"
             )
             print(
-                f"  residual signal mean/std: train {losses['train_residual_mean']:.4f}/{losses['train_residual_std']:.4f}, "
-                f"val {losses['val_residual_mean']:.4f}/{losses['val_residual_std']:.4f}"
+                f"  preference loss/acc/gap: train {losses['train_preference_loss']:.4f}/{losses['train_preference_accuracy']:.4f}/{losses['train_preference_gap']:.4f}, "
+                f"val {losses['val_preference_loss']:.4f}/{losses['val_preference_accuracy']:.4f}/{losses['val_preference_gap']:.4f}"
             )
         elif train_stage in ('policy_backbone', 'joint'):
             print(
@@ -845,8 +887,8 @@ while True:
             )
             if train_stage == 'joint':
                 print(
-                    f"  ao/list/total: train {losses['train_ao_loss']:.4f}/{losses['train_listwise_loss']:.4f}/{losses['train_total_loss']:.4f}, "
-                    f"val {losses['val_ao_loss']:.4f}/{losses['val_listwise_loss']:.4f}/{losses['val_total_loss']:.4f}"
+                    f"  ao/pref/total: train {losses['train_ao_loss']:.4f}/{losses['train_preference_loss']:.4f}/{losses['train_total_loss']:.4f}, "
+                    f"val {losses['val_ao_loss']:.4f}/{losses['val_preference_loss']:.4f}/{losses['val_total_loss']:.4f}"
                 )
         if wandb_log:
             log_payload = {
@@ -864,10 +906,12 @@ while True:
                     "val/kendall_tau_l2r": losses["val_kendall_tau"],
                     "train/prefix_mean_index": losses["train_prefix_mean_index"],
                     "val/prefix_mean_index": losses["val_prefix_mean_index"],
-                    "train/residual_mean": losses["train_residual_mean"],
-                    "val/residual_mean": losses["val_residual_mean"],
-                    "train/residual_std": losses["train_residual_std"],
-                    "val/residual_std": losses["val_residual_std"],
+                    "train/preference_loss": losses["train_preference_loss"],
+                    "val/preference_loss": losses["val_preference_loss"],
+                    "train/preference_accuracy": losses["train_preference_accuracy"],
+                    "val/preference_accuracy": losses["val_preference_accuracy"],
+                    "train/preference_gap": losses["train_preference_gap"],
+                    "val/preference_gap": losses["val_preference_gap"],
                 })
                 if latest_policy_train_stats is not None and "avg_score_per_position" in latest_policy_train_stats:
                     log_payload["order_head/origin_score_table"] = build_block_score_table(
@@ -883,16 +927,16 @@ while True:
                     "val/kendall_tau_l2r": losses["val_kendall_tau"],
                 })
                 if train_stage == 'joint':
-                    log_payload["train/listwise_loss"] = losses["train_listwise_loss"]
-                    log_payload["val/listwise_loss"] = losses["val_listwise_loss"]
+                    log_payload["train/preference_loss"] = losses["train_preference_loss"]
+                    log_payload["val/preference_loss"] = losses["val_preference_loss"]
+                    log_payload["train/preference_accuracy"] = losses["train_preference_accuracy"]
+                    log_payload["val/preference_accuracy"] = losses["val_preference_accuracy"]
+                    log_payload["train/preference_gap"] = losses["train_preference_gap"]
+                    log_payload["val/preference_gap"] = losses["val_preference_gap"]
                     log_payload["train/ao_loss"] = losses["train_ao_loss"]
                     log_payload["val/ao_loss"] = losses["val_ao_loss"]
                     log_payload["train/total_loss"] = losses["train_total_loss"]
                     log_payload["val/total_loss"] = losses["val_total_loss"]
-                    log_payload["train/residual_mean"] = losses["train_residual_mean"]
-                    log_payload["val/residual_mean"] = losses["val_residual_mean"]
-                    log_payload["train/residual_std"] = losses["train_residual_std"]
-                    log_payload["val/residual_std"] = losses["val_residual_std"]
             if latest_policy_train_stats is not None:
                 log_payload.update({
                     "policy/order_entropy": latest_policy_train_stats["order_entropy"],
@@ -904,21 +948,22 @@ while True:
                 })
                 if "prefix_auc" in latest_policy_train_stats:
                     log_payload["policy/prefix_auc"] = latest_policy_train_stats["prefix_auc"]
-                if "listwise_loss" in latest_policy_train_stats:
-                    log_payload["policy/listwise_loss"] = latest_policy_train_stats["listwise_loss"]
+                if "preference_loss" in latest_policy_train_stats:
+                    log_payload["policy/preference_loss"] = latest_policy_train_stats["preference_loss"]
+                if "preference_accuracy" in latest_policy_train_stats:
+                    log_payload["policy/preference_accuracy"] = latest_policy_train_stats["preference_accuracy"]
+                if "preference_gap" in latest_policy_train_stats:
+                    log_payload["policy/preference_gap"] = latest_policy_train_stats["preference_gap"]
                 if "ao_loss" in latest_policy_train_stats:
                     log_payload["policy/ao_loss"] = latest_policy_train_stats["ao_loss"]
                 if "total_loss" in latest_policy_train_stats:
                     log_payload["policy/total_loss"] = latest_policy_train_stats["total_loss"]
-                if "residual_mean" in latest_policy_train_stats:
-                    log_payload["policy/residual_mean"] = latest_policy_train_stats["residual_mean"]
-                    log_payload["policy/residual_std"] = latest_policy_train_stats["residual_std"]
                 if "token_prefix_auc" in latest_policy_train_stats:
                     log_payload["policy/token_prefix_auc"] = latest_policy_train_stats["token_prefix_auc"]
             if train_stage == 'joint' and latest_policy_train_stats is not None:
                 log_payload.update({
                     "joint/ao_loss": latest_policy_train_stats["ao_loss"],
-                    "joint/list_loss": latest_policy_train_stats["listwise_loss"],
+                    "joint/preference_loss": latest_policy_train_stats["preference_loss"],
                     "joint/total_loss": latest_policy_train_stats["total_loss"],
                     "joint/order_entropy": latest_policy_train_stats["order_entropy"],
                     "joint/prefix_mean_index": latest_policy_train_stats["prefix_mean_index"],
@@ -926,9 +971,6 @@ while True:
                 })
                 if "prefix_auc" in latest_policy_train_stats:
                     log_payload["joint/prefix_auc"] = latest_policy_train_stats["prefix_auc"]
-                if "residual_mean" in latest_policy_train_stats:
-                    log_payload["joint/residual_mean"] = latest_policy_train_stats["residual_mean"]
-                    log_payload["joint/residual_std"] = latest_policy_train_stats["residual_std"]
             log_payload["baseline/step_mean_avg"] = float(step_mean_baseline.mean().item())
             log_payload["baseline/step_var_avg"] = float(step_var_baseline.mean().item())
             for step_idx in range(num_blocks):
@@ -982,39 +1024,32 @@ while True:
             model.require_backward_grad_sync = (micro_step == gradient_accumulation_steps - 1)
         with ctx:
             if train_stage == 'order_head':
-                random_block_orders, _, token_losses, hidden_states = _forward_policy_features(
+                _, _, _, hidden_states = _forward_policy_features(
                     raw_model,
                     X,
-                    need_token_losses=True,
+                    need_token_losses=False,
                     track_grad=False,
                 )
                 scores = _score_policy_head(raw_model, X, hidden_states, detach_inputs=True)
-                block_losses = token_losses_to_block_losses(
-                    token_losses,
-                    block_len=block_order_block_len,
-                )
-                residual_targets = _compute_residual_block_targets(block_losses)
-                block_utilities = scatter_block_utilities_to_original_positions(
-                    residual_targets["step_utilities"],
-                    random_block_orders,
-                )
+                preference_targets = _sample_order_preference_targets(raw_model, X)
                 logits = None
-                loss = listwise_block_order_loss(
+                loss, pref_acc, _, _ = pairwise_order_preference_loss(
                     scores,
-                    block_utilities,
-                    temperature=order_temperature,
+                    preference_targets["preferred_orders"],
+                    preference_targets["other_orders"],
+                    prefix_k=policy_prefix_k,
+                    margin=preference_margin,
                 )
                 latest_policy_train_stats = _policy_stats(
                     scores.detach(),
                     build_prefix_policy_block_orders(scores.detach(), policy_prefix_k),
-                    block_losses=block_losses,
-                    token_losses=token_losses,
-                    residual_step_utilities=residual_targets["step_utilities"],
                 )
                 latest_policy_train_stats["avg_score_per_position"] = [
                     float(v) for v in scores.detach().mean(dim=0).cpu().tolist()
                 ]
-                latest_policy_train_stats["listwise_loss"] = float(loss.detach().item())
+                latest_policy_train_stats["preference_loss"] = float(loss.detach().item())
+                latest_policy_train_stats["preference_accuracy"] = float(pref_acc.detach().item())
+                latest_policy_train_stats["preference_gap"] = float(preference_targets["quality_gap"].mean().item())
             elif train_stage == 'policy_backbone':
                 scores, policy_block_orders, policy_token_orders, _ = _build_policy_orders_from_batch(
                     raw_model,
@@ -1039,16 +1074,13 @@ while True:
                 )
                 latest_policy_train_stats["ao_loss"] = float(loss.detach().item())
             elif train_stage == 'joint':
-                # Weak block-level joint / alternating-style joint:
-                # Part A uses a random block rollout to build residual utility targets for the order head.
-                # Part B uses a hard discrete block permutation for backbone training.
-                # Because block_orders are built by a non-differentiable hard permutation,
-                # ao_loss does not directly backpropagate into policy_order_head.
-                # The order head therefore still receives its explicit gradient mainly from list_loss.
-                random_block_orders, _, random_token_losses, hidden_states_for_list = _forward_policy_features(
+                # Weak joint training with preference-style supervision for the order head.
+                # Part A trains the order head to prefer better sampled orders.
+                # Part B trains the backbone under the discrete prefix policy rollout.
+                _, _, _, hidden_states_for_list = _forward_policy_features(
                     raw_model,
                     X,
-                    need_token_losses=True,
+                    need_token_losses=False,
                     track_grad=True,
                 )
                 scores_for_list = _score_policy_head(
@@ -1057,19 +1089,13 @@ while True:
                     hidden_states_for_list,
                     detach_inputs=False,
                 )
-                random_block_losses = token_losses_to_block_losses(
-                    random_token_losses,
-                    block_len=block_order_block_len,
-                )
-                residual_targets = _compute_residual_block_targets(random_block_losses)
-                block_utilities = scatter_block_utilities_to_original_positions(
-                    residual_targets["step_utilities"],
-                    random_block_orders,
-                )
-                list_loss = listwise_block_order_loss(
+                preference_targets = _sample_order_preference_targets(raw_model, X)
+                preference_loss, pref_acc, _, _ = pairwise_order_preference_loss(
                     scores_for_list,
-                    block_utilities,
-                    temperature=order_temperature,
+                    preference_targets["preferred_orders"],
+                    preference_targets["other_orders"],
+                    prefix_k=policy_prefix_k,
+                    margin=preference_margin,
                 )
 
                 # Separate forward path for the learned block policy rollout.
@@ -1106,16 +1132,17 @@ while True:
                     token_losses,
                     block_len=block_order_block_len,
                 )
-                total_loss = ao_loss + lambda_list * list_loss
+                total_loss = ao_loss + lambda_list * preference_loss
                 loss = total_loss
                 latest_policy_train_stats = _policy_stats(
                     scores_for_policy_detached,
                     policy_block_orders.detach(),
                     block_losses=policy_block_losses,
                     token_losses=token_losses,
-                    residual_step_utilities=residual_targets["step_utilities"],
                 )
-                latest_policy_train_stats["listwise_loss"] = float(list_loss.detach().item())
+                latest_policy_train_stats["preference_loss"] = float(preference_loss.detach().item())
+                latest_policy_train_stats["preference_accuracy"] = float(pref_acc.detach().item())
+                latest_policy_train_stats["preference_gap"] = float(preference_targets["quality_gap"].mean().item())
                 latest_policy_train_stats["ao_loss"] = float(ao_loss.detach().item())
                 latest_policy_train_stats["total_loss"] = float(total_loss.detach().item())
             else:

@@ -1,0 +1,10 @@
+{
+  "mean_l2r_rank": 133.251484375,
+  "mean_l2r_head_score": -27.39114013671875,
+  "l2r_top1_rate": 0.01078125,
+  "l2r_top5_rate": 0.03765625,
+  "mean_top1_kendall_tau": 0.007813760058488696,
+  "mean_top1_kendall_distance": 0.49609311670064926,
+  "mean_top1_signal": -6.781349987983703,
+  "mean_l2r_signal": -7.077942206859588
+}

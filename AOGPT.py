@@ -158,6 +158,7 @@ class AOGPTConfig:
     dropout: float = 0.0
     bias: bool = True # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
     block_order_block_len: int = 16
+    policy_head_input_mode: str = "pos_only"
 
 class AOGPT(nn.Module):
 
@@ -302,6 +303,19 @@ class AOGPT(nn.Module):
             tok_emb = tok_emb.detach()
             pos_emb = pos_emb.detach()
             hidden_states = hidden_states.detach()
+        input_mode = getattr(self.config, "policy_head_input_mode", "pos_only")
+        if input_mode == "pos_only":
+            tok_emb = torch.zeros_like(tok_emb)
+            hidden_states = torch.zeros_like(hidden_states)
+        elif input_mode == "token_pos":
+            hidden_states = torch.zeros_like(hidden_states)
+        elif input_mode == "hidden_pos":
+            tok_emb = torch.zeros_like(tok_emb)
+        elif input_mode != "full":
+            raise ValueError(
+                f"Unsupported policy_head_input_mode={input_mode}. "
+                "Expected one of: pos_only, token_pos, hidden_pos, full."
+            )
         return self.policy_order_head(tok_emb, pos_emb, hidden_states)
 
     def forward(

@@ -235,6 +235,28 @@ def build_signal_specs(num_blocks):
             late_penalty = block_losses[:, late_start:].mean(dim=-1) - early.mean(dim=-1)
         return auc_term + 0.3 * drop_term + 0.3 * late_penalty
 
+    def ar_likeness_area_only(block_losses):
+        early = block_losses[:, :early_k]
+        return -early.mean(dim=-1)
+
+    def ar_likeness_area_plus_slope(block_losses):
+        early = block_losses[:, :early_k]
+        area_term = -early.mean(dim=-1)
+        if early.size(1) < 2:
+            slope_term = torch.zeros_like(area_term)
+        else:
+            slope_term = early[:, 0] - early[:, -1]
+        return area_term + slope_term
+
+    def ar_likeness_area_plus_late_drop(block_losses):
+        early = block_losses[:, :early_k]
+        area_term = -early.mean(dim=-1)
+        if block_losses.size(1) <= early_k:
+            late_drop = torch.zeros_like(area_term)
+        else:
+            late_drop = torch.clamp(early[:, -1] - block_losses[:, -1], min=0.0)
+        return area_term - late_drop
+
     return [
         ("prefix_auc_4", prefix_auc_4),
         ("early_weighted_auc", early_weighted_auc),
@@ -242,6 +264,9 @@ def build_signal_specs(num_blocks):
         ("early_weighted_auc_plus_total_variation", early_weighted_tv),
         ("early_drop_plus_early_weighted_auc", early_drop_plus_weighted),
         ("early_weighted_auc_plus_early_drop_plus_late_penalty", early_weighted_drop_late_penalty),
+        ("ar_likeness_area_only", ar_likeness_area_only),
+        ("ar_likeness_area_plus_slope", ar_likeness_area_plus_slope),
+        ("ar_likeness_area_plus_late_drop", ar_likeness_area_plus_late_drop),
     ]
 
 
