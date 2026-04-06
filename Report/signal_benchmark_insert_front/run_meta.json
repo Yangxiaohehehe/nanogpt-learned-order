@@ -1,0 +1,26 @@
+{
+  "ckpt_path": "out-wikitext103-random/ckpt.pt",
+  "dataset": "wikitext103",
+  "split": "val",
+  "batch_size": 8,
+  "num_batches": 4,
+  "num_steps": 5,
+  "candidate_eval_batch_size": 64,
+  "move_mode": "insert_front",
+  "seed": 12345,
+  "device": "cuda",
+  "dtype": "bfloat16",
+  "signals": [
+    "prefix_auc_4",
+    "early_weighted_auc",
+    "early_weighted_auc_plus_variance",
+    "early_weighted_auc_plus_total_variation",
+    "early_drop_plus_early_weighted_auc",
+    "early_weighted_auc_plus_early_drop_plus_late_penalty"
+  ],
+  "evaluation_policy": {
+    "primary_metric": "kendall_distance",
+    "secondary_metric": "kendall_tau",
+    "note": "These metrics are evaluation-only for measuring proximity to l2r. They are not training targets and must not be propagated as supervision."
+  }
+}

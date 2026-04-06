@@ -1,0 +1,525 @@
+"""
+Full definition of a GPT Language Model, all of it in this single file.
+References:
+1) the official GPT-2 TensorFlow implementation released by OpenAI:
+https://github.com/openai/gpt-2/blob/master/src/model.py
+2) huggingface/transformers PyTorch implementation:
+https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py
+"""
+
+import math
+import inspect
+from dataclasses import dataclass
+
+import torch
+import torch.nn as nn
+from torch.nn import functional as F
+import random
+
+def modulate(x, shift, scale):
+    return x * (1 + scale) + shift
+
+class RMSNorm(nn.Module):
+    def __init__(self, ndim):
+        """
+        LlamaRMSNorm is equivalent to T5LayerNorm
+        """
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(ndim))
+
+    def forward(self, input):
+        return F.rms_norm(input, self.weight.shape, self.weight, 1e-5)
+
+
+class CausalSelfAttention(nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+        assert config.n_embd % config.n_head == 0
+        # key, query, value projections for all heads, but in a batch
+        self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
+        # output projection
+        self.c_proj = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
+        # regularization
+        self.attn_dropout = nn.Dropout(0.)
+        self.resid_dropout = nn.Dropout(config.dropout)
+        self.n_head = config.n_head
+        self.n_embd = config.n_embd
+        self.dropout = config.dropout
+        self.q_norm = RMSNorm(self.n_embd // self.n_head)
+        self.k_norm = RMSNorm(self.n_embd // self.n_head)
+        # flash attention make GPU go brrrrr but support is only in PyTorch >= 2.0
+        self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
+        if not self.flash:
+            print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
+            # causal mask to ensure that attention is only applied to the left in the input sequence ; + 1 to handle the additional [None] token
+            self.register_buffer("bias", torch.tril(torch.ones(config.block_size + 1, config.block_size + 1)) 
+                                        .view(1, 1, config.block_size + 1, config.block_size + 1))
+
+    def forward(self, x):
+        B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
+
+        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
+        q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
+        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        q, k = self.q_norm(q), self.k_norm(k)
+
+        # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
+        if self.flash:
+            # efficient attention using Flash Attention CUDA kernels
+            y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0, is_causal=True)
+        else:
+            # manual implementation of attention
+            att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+            att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+            att = F.softmax(att, dim=-1)
+            att = self.attn_dropout(att)
+            y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+        y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
+
+        # output projection
+        y = self.resid_dropout(self.c_proj(y))
+        return y
+
+class MLP(nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+        self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd, bias=config.bias)
+        self.gelu    = nn.GELU()
+        self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd, bias=config.bias)
+        self.dropout = nn.Dropout(config.dropout)
+
+    def forward(self, x):
+        x = self.c_fc(x)
+        x = self.gelu(x)
+        x = self.c_proj(x)
+        x = self.dropout(x)
+        return x
+
+class Block(nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+        self.ln_1 = RMSNorm(config.n_embd)
+        self.attn = CausalSelfAttention(config)
+        self.ln_2 = RMSNorm(config.n_embd)
+        self.mlp = MLP(config)
+        self.adaLN = nn.Sequential(
+            nn.SiLU(),
+            nn.Linear(128, 6 * config.n_embd, bias=True)
+        )
+
+    def forward(self, x, c):
+        shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (self.adaLN(c)).chunk(6, dim=-1)
+        x = x + gate_msa * self.attn(modulate(self.ln_1(x), shift_msa, scale_msa))
+        x = x + gate_mlp * self.mlp(modulate(self.ln_2(x), shift_mlp, scale_mlp))
+        return x
+
+class FinalLayer(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.ln_f = RMSNorm(config.n_embd)
+        self.adaLN_final = nn.Sequential(
+            nn.SiLU(),
+            nn.Linear(128, 2 * config.n_embd, bias=True)
+        )
+    
+    def forward(self, x, c):
+        shift, scale = (self.adaLN_final(c)).chunk(2, dim=-1)
+        x = modulate(self.ln_f(x), shift, scale)
+        return x
+
+class OrderHead(nn.Module):
+    """Lightweight block scoring head for block-level order selection."""
+
+    def __init__(self, n_embd):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(3 * n_embd, n_embd),
+            nn.GELU(),
+            nn.Linear(n_embd, 1),
+        )
+
+    def forward(self, token_emb, pos_emb, hidden_states):
+        # All inputs are aligned to the original token order: (B, T, C).
+        features = torch.cat([token_emb, pos_emb, hidden_states], dim=-1)
+        return self.net(features).squeeze(-1)
+
+@dataclass
+class AOGPTConfig:
+    block_size: int = 1024
+    vocab_size: int = 50304 # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
+    n_layer: int = 12
+    n_head: int = 12
+    n_embd: int = 768
+    dropout: float = 0.0
+    bias: bool = True # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
+    block_order_block_len: int = 16
+
+class AOGPT(nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+        assert config.vocab_size is not None
+        assert config.block_size is not None
+        assert config.block_size % config.block_order_block_len == 0
+        self.config = config
+        self.block_order_block_len = int(config.block_order_block_len)
+        self.num_blocks = config.block_size // self.block_order_block_len
+
+        # Add target position aware positional encoding
+        self.transformer = nn.ModuleDict(dict(
+            wte = nn.Embedding(config.vocab_size, config.n_embd),
+            wpe = nn.Embedding(config.block_size + 1, config.n_embd),  # + 1 to handle additional [None] token for unconditional generation
+            wtpe = nn.Embedding(config.block_size, 128),     # [None] is not target   
+            wnonee = nn.Embedding(1, config.n_embd),                   # embedding for [None] token
+            drop = nn.Dropout(config.dropout),
+            h = nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
+            final_layer = FinalLayer(config),
+        ))
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=True)
+        self.policy_order_head = OrderHead(config.n_embd)
+
+        # init all weights
+        self.apply(self._init_weights)
+        # apply special scaled init to the residual projections, per GPT-2 paper
+        for pn, p in self.named_parameters():
+            if pn.endswith('c_proj.weight'):
+                torch.nn.init.trunc_normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config.n_layer), a=-3*0.02/math.sqrt(2 * config.n_layer), b=3*0.02/math.sqrt(2 * config.n_layer))
+
+        # report number of parameters
+        print("number of parameters: %.2fM" % (self.get_num_params()/1e6,))
+
+    def get_num_params(self, non_embedding=True):
+        """
+        Return the number of parameters in the model.
+        For non-embedding count (default), the position embeddings get subtracted.
+        The token embeddings would too, except due to the parameter sharing these
+        params are actually used as weights in the final layer, so we include them.
+        """
+        n_params = sum(p.numel() for p in self.parameters())
+        if non_embedding:
+            n_params -= self.transformer.wpe.weight.numel()
+        return n_params
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.trunc_normal_(module.weight, mean=0.0, std=0.02, a=-3*0.02, b=3*0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.trunc_normal_(module.weight, mean=0.0, std=0.02, a=-3*0.02, b=3*0.02)
+    
+    def _expand_block_orders_to_token_orders(self, block_orders):
+        batch_size, num_blocks = block_orders.shape
+        assert num_blocks == self.num_blocks
+        block_offsets = (
+            torch.arange(self.block_order_block_len, device=block_orders.device)
+            .view(1, 1, self.block_order_block_len)
+        )
+        token_orders = block_orders.unsqueeze(-1) * self.block_order_block_len + block_offsets
+        return token_orders.reshape(batch_size, self.config.block_size)
+
+    def sample_random_block_orders(self, x):
+        batch_size = x.shape[0]
+        random_block_orders = [
+            torch.randperm(self.num_blocks, device=x.device)
+            for _ in range(batch_size)
+        ]
+        return torch.stack(random_block_orders)
+
+    # Block-level random order; each block keeps its internal l2r token order.
+    def sample_random_orders(self, x):
+        return self._expand_block_orders_to_token_orders(self.sample_random_block_orders(x))
+
+    def sample_random_orders_CL(self, x, random_ratio):
+        batch_size = x.shape[0]
+        shuffled_block_orders = []
+
+        for _ in range(batch_size):
+            if random.random() < random_ratio:
+                shuffled_block_orders.append(torch.randperm(self.num_blocks, device=x.device))
+            else:
+                shuffled_block_orders.append(torch.arange(self.num_blocks, device=x.device))
+        return self._expand_block_orders_to_token_orders(torch.stack(shuffled_block_orders))
+
+    def set_ascending_orders(self, x):
+        batch_size = x.shape[0]
+        ascending_block_orders = torch.arange(self.num_blocks, device=x.device).unsqueeze(0).expand(batch_size, -1)
+        return self._expand_block_orders_to_token_orders(ascending_block_orders)
+
+    # From rar https://github.com/bytedance/1d-tokenizer/blob/main/modeling/rar.py#L289
+    def shuffle(self, x, orders):
+        batch_size, seq_len = x.shape[:2]
+        batch_indices = torch.arange(batch_size).unsqueeze(1).expand(-1, seq_len)
+        shuffled_x = x[batch_indices, orders]
+        return shuffled_x
+    
+    # From rar https://github.com/bytedance/1d-tokenizer/blob/main/modeling/rar.py#L295
+    def unshuffle(self, shuffled_x, orders):
+        # Unshuffle the tensor based on the original orders
+        batch_size, seq_len = shuffled_x.shape[:2]
+        batch_indices = torch.arange(batch_size).unsqueeze(1).expand(-1, seq_len)
+        unshuffled_x = torch.zeros_like(shuffled_x)
+        unshuffled_x[batch_indices, orders] = shuffled_x
+        return unshuffled_x
+    
+    def _format_outputs(self, logits, loss, token_losses=None, hidden_states=None, order_info=None):
+        outputs = [logits, loss]
+        if token_losses is not None:
+            outputs.append(token_losses)
+        if hidden_states is not None:
+            outputs.append(hidden_states)
+        return tuple(outputs)
+
+    def _pool_tokens_to_blocks(self, features):
+        batch_size, seq_len, channels = features.shape
+        assert seq_len == self.config.block_size
+        return features.view(batch_size, self.num_blocks, self.block_order_block_len, channels).mean(dim=2)
+
+    def get_policy_inputs(self, idx, hidden_states):
+        """
+        Return block-level token/position embeddings and hidden states aligned to
+        the original block order.
+        """
+        batch_size, seq_len = idx.shape
+        assert seq_len == self.config.block_size
+        pos = torch.arange(1, seq_len + 1, dtype=torch.long, device=idx.device)
+        tok_emb = self.transformer.wte(idx)
+        pos_emb = self.transformer.wpe(pos).unsqueeze(0).expand(batch_size, -1, -1)
+        return (
+            self._pool_tokens_to_blocks(tok_emb),
+            self._pool_tokens_to_blocks(pos_emb),
+            self._pool_tokens_to_blocks(hidden_states),
+        )
+
+    def score_prefix_policy(self, idx, hidden_states, detach_inputs=False):
+        tok_emb, pos_emb, hidden_states = self.get_policy_inputs(idx, hidden_states)
+        if detach_inputs:
+            tok_emb = tok_emb.detach()
+            pos_emb = pos_emb.detach()
+            hidden_states = hidden_states.detach()
+        return self.policy_order_head(tok_emb, pos_emb, hidden_states)
+
+    def forward(
+        self,
+        idx,
+        targets=None,
+        mode='Random',
+        orders=None,
+        random_ratio=None,
+        return_token_loss=False,
+        return_hidden=False,
+    ):
+        if mode is None:
+            assert orders is not None and idx.shape==orders.shape, 'mode is None, order should be given and with the same shape of idx'
+        else:
+            assert mode in ['AR', 'Random', 'Random_CL'], 'mode should be AR or Random or Random_CL'
+        # targets is accepted for interface compatibility; AO-GPT predicts the revealed token ids from idx.
+        _ = targets
+        
+        if mode is None:
+            return self.forward_fn(
+                idx,
+                orders,
+                return_token_loss=return_token_loss,
+                return_hidden=return_hidden,
+            )
+        elif mode == 'AR':
+            # get ascending orders
+            orders = self.set_ascending_orders(idx)
+            return self.forward_fn(
+                idx,
+                orders,
+                return_token_loss=return_token_loss,
+                return_hidden=return_hidden,
+            )
+        elif mode == 'Random':
+            # get random orders
+            orders = self.sample_random_orders(idx)   
+            return self.forward_fn(
+                idx,
+                orders,
+                return_token_loss=return_token_loss,
+                return_hidden=return_hidden,
+            )
+        elif mode == 'Random_CL':
+            assert random_ratio is not None
+            orders = self.sample_random_orders_CL(idx, random_ratio)
+            return self.forward_fn(
+                idx,
+                orders,
+                return_token_loss=return_token_loss,
+                return_hidden=return_hidden,
+            )
+
+
+    def forward_fn(
+        self,
+        idx,
+        orders,
+        return_token_loss=False,
+        return_hidden=False,
+    ):
+        
+        device = idx.device
+        b, t = idx.size()
+        assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
+        pos = torch.arange(0, t+1, dtype=torch.long, device=device) # shape (t+1) to include the [None] token
+        
+        # shuffle input ids given orders
+        idx = self.shuffle(idx, orders) # of shape (b, t)
+        targets = idx # of shape (b, t)
+
+        # prepare token embedding, position embedding, target position embedding and shuffle them
+        tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd); this is the shuffled token embedding because the idx has been shuffled
+        none_tok_emb = self.transformer.wnonee(torch.tensor([[0]], device=idx.device)) # [None] token embedding of shape (1, 1, n_embd)
+        none_tok_emb = none_tok_emb.expand(idx.shape[0], -1, -1) # expand to shape (b, 1, n_embd)
+        tok_emb = torch.cat([none_tok_emb, tok_emb], dim = 1) # concat to shape (b, t+1, n_embd)
+        pos_emb = self.transformer.wpe(pos) # position embeddings of shape (t+1, n_embd)
+        pos_emb = pos_emb.unsqueeze(0).expand(idx.shape[0], -1, -1) # expand to shape (b, t+1, n_embd)
+        pos_emb_prefix = pos_emb[:,:1] # position embedding prefix on the [None] token of shape (b, 1, n_embd)
+        pos_emb_postfix = self.shuffle(pos_emb[:,1:], orders) # position embedding postfix of shape (b, t, n_embd); shuffled
+        target_pos_emb = self.transformer.wtpe(pos[:t]) # target position embeddings of shape (t, n_embd)
+        target_pos_emb = target_pos_emb.unsqueeze(0).expand(idx.shape[0], -1, -1) # expand to shape (b, t, n_embd)
+        target_pos_emb_prefix = self.shuffle(target_pos_emb, orders) # shuffle target position embeddings of shape (b, t, n_embd)
+        target_pos_emb_postfix = torch.zeros_like(target_pos_emb[:, :1]) # zeros of shape (b, 1, n_embd)
+        target_pos_emb_final = torch.cat([target_pos_emb_prefix, target_pos_emb_postfix], dim = 1)
+        
+        x = tok_emb + torch.cat([pos_emb_prefix, pos_emb_postfix], dim=1)
+        
+        # forward the GPT model itself
+        x = self.transformer.drop(x)
+        for block in self.transformer.h:
+            x = block(x, target_pos_emb_final)
+        x = self.transformer.final_layer(x, target_pos_emb_final)
+        hidden_states_orig = self.unshuffle(x[:, 1:, :], orders)
+
+
+        # if we are given some desired targets also calculate the loss
+        logits = self.lm_head(x)
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_targets = targets
+        token_losses = F.cross_entropy(
+            shift_logits.view(-1, shift_logits.size(-1)),
+            shift_targets.view(-1),
+            ignore_index=-1,
+            reduction='none',
+        ).view_as(shift_targets)
+        loss = token_losses.mean()
+        token_output = token_losses.detach() if return_token_loss else None
+        hidden_output = hidden_states_orig if return_hidden else None
+        return self._format_outputs(
+            logits,
+            loss,
+            token_losses=token_output,
+            hidden_states=hidden_output,
+        )
+
+    def crop_block_size(self, block_size):
+        # model surgery to decrease the block size if necessary
+        # e.g. we may load the GPT2 pretrained model checkpoint (block size 1024)
+        # but want to use a smaller block size for some smaller, simpler model
+        assert block_size <= self.config.block_size
+        assert block_size % self.block_order_block_len == 0
+        self.config.block_size = block_size
+        self.num_blocks = block_size // self.block_order_block_len
+        self.transformer.wpe.weight = nn.Parameter(self.transformer.wpe.weight[:block_size+1])   # + 1 to handle the additional [None] token
+        self.transformer.wtpe.weight = nn.Parameter(self.transformer.wtpe.weight[:block_size])
+        for block in self.transformer.h:
+            if hasattr(block.attn, 'bias'):
+                block.attn.bias = block.attn.bias[:,:,:block_size + 1,:block_size + 1] # + 1 to handle the additional [None] token
+
+    def configure_optimizers(self, weight_decay, learning_rate, betas, device_type, order_head_lr_mult=1.0):
+        # start with all of the candidate parameters
+        param_dict = {pn: p for pn, p in self.named_parameters()}
+        # filter out those that do not require grad
+        param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
+
+        order_head_params = {
+            pn: p for pn, p in param_dict.items()
+            if pn.startswith("policy_order_head.")
+        }
+        backbone_params = {
+            pn: p for pn, p in param_dict.items()
+            if not pn.startswith("policy_order_head.")
+        }
+
+        def split_decay_nodecay(named_params):
+            decay = [p for _, p in named_params.items() if p.dim() >= 2]
+            nodecay = [p for _, p in named_params.items() if p.dim() < 2]
+            return decay, nodecay
+
+        bb_decay, bb_nodecay = split_decay_nodecay(backbone_params)
+        oh_decay, oh_nodecay = split_decay_nodecay(order_head_params)
+
+        optim_groups = []
+        if bb_decay:
+            optim_groups.append({'params': bb_decay, 'weight_decay': weight_decay, 'lr_scale': 1.0})
+        if bb_nodecay:
+            optim_groups.append({'params': bb_nodecay, 'weight_decay': 0.0, 'lr_scale': 1.0})
+        if oh_decay:
+            optim_groups.append({'params': oh_decay, 'weight_decay': weight_decay, 'lr_scale': float(order_head_lr_mult)})
+        if oh_nodecay:
+            optim_groups.append({'params': oh_nodecay, 'weight_decay': 0.0, 'lr_scale': float(order_head_lr_mult)})
+
+        num_bb_params = sum(p.numel() for p in backbone_params.values())
+        num_oh_params = sum(p.numel() for p in order_head_params.values())
+        print(f"backbone params: {num_bb_params:,}")
+        print(f"order_head params: {num_oh_params:,}")
+        print(f"order_head lr multiplier: {order_head_lr_mult}")
+
+        # Create AdamW optimizer and use the fused version if it is available
+        fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
+        use_fused = fused_available and device_type == 'cuda'
+        extra_args = dict(fused=True) if use_fused else dict()
+        optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, **extra_args)
+        print(f"using fused AdamW: {use_fused}")
+
+        return optimizer
+
+    def estimate_mfu(self, fwdbwd_per_iter, dt):
+        """ estimate model flops utilization (MFU) in units of A100 bfloat16 peak FLOPS """
+        # first estimate the number of flops we do per iteration.
+        # see PaLM paper Appendix B as ref: https://arxiv.org/abs/2204.02311
+        N = self.get_num_params()
+        cfg = self.config
+        L, H, Q, T = cfg.n_layer, cfg.n_head, cfg.n_embd//cfg.n_head, cfg.block_size + 1  # + 1 to handle the additional [None] token
+        flops_per_token = 6*N + 12*L*H*Q*T
+        flops_per_fwdbwd = flops_per_token * T
+        flops_per_iter = flops_per_fwdbwd * fwdbwd_per_iter
+        # express our flops throughput as ratio of A100 bfloat16 peak flops
+        flops_achieved = flops_per_iter * (1.0/dt) # per second
+        flops_promised = 312e12 # A100 GPU bfloat16 peak flops is 312 TFLOPS
+        mfu = flops_achieved / flops_promised
+        return mfu
+
+    @torch.no_grad()
+    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
+        """
+        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
+        the sequence max_new_tokens times, feeding the predictions back into the model each time.
+        Most likely you'll want to make sure to be in model.eval() mode of operation for this.
+        """
+        for _ in range(max_new_tokens):
+            # if the sequence context is growing too long we must crop it at block_size
+            idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
+            # forward the model to get the logits for the index in the sequence
+            logits, _ = self(idx_cond)
+            # pluck the logits at the final step and scale by desired temperature
+            logits = logits[:, -1, :] / temperature
+            # optionally crop the logits to only the top k options
+            if top_k is not None:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, [-1]]] = -float('Inf')
+            # apply softmax to convert logits to (normalized) probabilities
+            probs = F.softmax(logits, dim=-1)
+            # sample from the distribution
+            idx_next = torch.multinomial(probs, num_samples=1)
+            # append sampled index to the running sequence and continue
+            idx = torch.cat((idx, idx_next), dim=1)
+
+        return idx

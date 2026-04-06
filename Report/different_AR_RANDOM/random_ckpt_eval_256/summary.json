@@ -1,0 +1,107 @@
+{
+  "ckpt_path": "out-wikitext103-random/ckpt.pt",
+  "out_dir": "eval_results/random_ckpt_eval_256",
+  "dataset": "wikitext103",
+  "split": "val",
+  "batch_size": 64,
+  "block_size": 256,
+  "num_batches": 200,
+  "num_random_seeds": 5,
+  "swap_pairs": [
+    [
+      1,
+      256
+    ]
+  ],
+  "seed": 12345,
+  "random_seeds": [
+    1501552845,
+    488200390,
+    1693606510,
+    680233354,
+    438466540
+  ],
+  "device": "cuda:0",
+  "dtype": "bfloat16",
+  "iter_num": 10000,
+  "best_val_loss": 4.338995933532715,
+  "modes": [
+    "AR",
+    "Swap",
+    "Random"
+  ],
+  "ar_curve_mean": 4.449248313903809,
+  "random_curve_mean": 4.3345537185668945,
+  "order_distance_to_ar": {
+    "AR": {
+      "order_type": "AR",
+      "kendall_tau_mean": 1.0,
+      "kendall_tau_std": 0.0,
+      "kendall_tau_min": 1.0,
+      "kendall_tau_max": 1.0,
+      "num_samples": 12800
+    },
+    "swap_1_256": {
+      "order_type": "Swap",
+      "kendall_tau_mean": 0.9688112745098039,
+      "kendall_tau_std": 0.0,
+      "kendall_tau_min": 0.9688112745098039,
+      "kendall_tau_max": 0.9688112745098039,
+      "num_samples": 12800
+    },
+    "random_seed_1501552845": {
+      "order_type": "Random",
+      "kendall_tau_mean": 0.0004966203278186271,
+      "kendall_tau_std": 0.04185031554576766,
+      "kendall_tau_min": -0.15912990196078436,
+      "kendall_tau_max": 0.1583946078431373,
+      "num_samples": 12800
+    },
+    "random_seed_488200390": {
+      "order_type": "Random",
+      "kendall_tau_mean": 0.000289253982843137,
+      "kendall_tau_std": 0.04171692437973878,
+      "kendall_tau_min": -0.1457720588235294,
+      "kendall_tau_max": 0.16213235294117645,
+      "num_samples": 12800
+    },
+    "random_seed_1693606510": {
+      "order_type": "Random",
+      "kendall_tau_mean": 0.0006651300168504897,
+      "kendall_tau_std": 0.04210007547317512,
+      "kendall_tau_min": -0.17518382352941186,
+      "kendall_tau_max": 0.16678921568627447,
+      "num_samples": 12800
+    },
+    "random_seed_680233354": {
+      "order_type": "Random",
+      "kendall_tau_mean": -0.00012133789062499984,
+      "kendall_tau_std": 0.04189310375385787,
+      "kendall_tau_min": -0.1517156862745097,
+      "kendall_tau_max": 0.1594362745098039,
+      "num_samples": 12800
+    },
+    "random_seed_438466540": {
+      "order_type": "Random",
+      "kendall_tau_mean": 0.00033129882812499956,
+      "kendall_tau_std": 0.04194456430026153,
+      "kendall_tau_min": -0.1572916666666666,
+      "kendall_tau_max": 0.17628676470588234,
+      "num_samples": 12800
+    },
+    "random_seed_stats": {
+      "order_type": "Random",
+      "kendall_tau_mean": 0.0003321930530024508,
+      "kendall_tau_std": 0.00026283768025597414,
+      "kendall_tau_min": -0.00012133789062499984,
+      "kendall_tau_max": 0.0006651300168504897,
+      "num_samples": 64000
+    }
+  },
+  "target_prob_curve_mean": 0.17017829418182373,
+  "random_target_prob_curve_mean": 0.21568119525909424,
+  "max_prob_curve_mean": 0.30240169167518616,
+  "random_max_prob_curve_mean": 0.31216439604759216,
+  "entropy_curve_mean": 4.085148811340332,
+  "random_entropy_curve_mean": 4.264493942260742
+}
