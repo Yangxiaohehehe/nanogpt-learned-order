@@ -36,8 +36,10 @@ def parse_args():
     parser.add_argument("--random_pool_size", type=int, default=64)
     parser.add_argument("--structured_pool_size", type=int, default=64)
     parser.add_argument("--top_pair_pool_size", type=int, default=128)
+    parser.add_argument("--aggregate_top_k_pairs", type=int, default=64)
     parser.add_argument("--prefix_len", type=int, default=8)
     parser.add_argument("--segment_len", type=int, default=4)
+    parser.add_argument("--pair_score_k", type=int, default=2)
     parser.add_argument("--tv_weight", type=float, default=0.3)
     parser.add_argument("--log_every_batches", type=int, default=10)
     parser.add_argument("--seed", type=int, default=12345)
@@ -133,22 +135,61 @@ def compute_signal_from_block_losses(block_losses, early_k, tv_weight):
     }
 
 
-def evaluate_orders_with_metrics(model, idx, block_orders, early_k, tv_weight, autocast_context):
-    metrics = evaluate_block_order_quality(
-        model,
-        idx,
-        block_orders,
-        prefix_k=max(2, min(early_k, model.num_blocks)),
-        block_len=model.block_order_block_len,
-        autocast_context=autocast_context,
-    )
-    signal_metrics = compute_signal_from_block_losses(metrics["block_losses"], early_k=early_k, tv_weight=tv_weight)
+def compute_window_area_plus_tv(block_losses, window_k, tv_weight):
+    block_losses = block_losses.float()
+    window_k = max(1, min(int(window_k), block_losses.size(1)))
+    window = block_losses[:, :window_k]
+    area = -window.mean(dim=-1)
+    if window.size(1) < 2:
+        total_variation = torch.zeros_like(area)
+    else:
+        total_variation = -(window[:, 1:] - window[:, :-1]).abs().sum(dim=-1)
+    return area + float(tv_weight) * total_variation
+
+
+def evaluate_orders_with_metrics(
+    model,
+    idx,
+    block_orders,
+    early_k,
+    tv_weight,
+    autocast_context,
+    eval_batch_size=None,
+):
+    total = block_orders.size(0)
+    chunk_size = total if eval_batch_size is None else max(1, int(eval_batch_size))
+    block_loss_parts = []
+    kendall_parts = []
+    early_parts = []
+    full_parts = []
+
+    for start in range(0, total, chunk_size):
+        end = min(total, start + chunk_size)
+        metrics = evaluate_block_order_quality(
+            model,
+            idx[start:end],
+            block_orders[start:end],
+            prefix_k=max(2, min(early_k, model.num_blocks)),
+            block_len=model.block_order_block_len,
+            autocast_context=autocast_context,
+        )
+        signal_metrics = compute_signal_from_block_losses(
+            metrics["block_losses"],
+            early_k=early_k,
+            tv_weight=tv_weight,
+        )
+        block_loss_parts.append(metrics["block_losses"])
+        kendall_parts.append(metrics["kendall_per_sample"])
+        early_parts.append(signal_metrics["early_area_plus_tv"])
+        full_parts.append(signal_metrics["full_area_plus_tv"])
+
+    kendall = torch.cat(kendall_parts, dim=0)
     return {
-        "block_losses": metrics["block_losses"],
-        "kendall": metrics["kendall_per_sample"],
-        "kendall_distance": (1.0 - metrics["kendall_per_sample"]) / 2.0,
-        "early_area_plus_tv": signal_metrics["early_area_plus_tv"],
-        "full_area_plus_tv": signal_metrics["full_area_plus_tv"],
+        "block_losses": torch.cat(block_loss_parts, dim=0),
+        "kendall": kendall,
+        "kendall_distance": (1.0 - kendall) / 2.0,
+        "early_area_plus_tv": torch.cat(early_parts, dim=0),
+        "full_area_plus_tv": torch.cat(full_parts, dim=0),
     }
 
 
@@ -168,7 +209,18 @@ def build_random_suffix_orders(pairs, batch_size, num_blocks, device, generator)
     return torch.stack(orders, dim=1)  # (B, num_pairs, num_blocks)
 
 
-def mine_pair_scores(model, tokens, batch_size, num_batches, early_k, tv_weight, device, autocast_context, seed, pair_eval_batch_size):
+def mine_pair_scores(
+    model,
+    tokens,
+    batch_size,
+    num_batches,
+    pair_score_k,
+    tv_weight,
+    device,
+    autocast_context,
+    seed,
+    pair_eval_batch_size,
+):
     num_blocks = model.num_blocks
     pair_list = [(i, j) for i in range(num_blocks) for j in range(num_blocks) if i != j]
     pair_score_sums = torch.zeros(len(pair_list), dtype=torch.float64)
@@ -203,11 +255,18 @@ def mine_pair_scores(model, tokens, batch_size, num_batches, early_k, tv_weight,
                     model,
                     flat_idx[eval_start:eval_end],
                     flat_orders[eval_start:eval_end],
-                    early_k=early_k,
+                    early_k=max(2, int(pair_score_k)),
                     tv_weight=tv_weight,
                     autocast_context=autocast_context,
+                    eval_batch_size=eval_chunk_size,
                 )
-                score_parts.append(eval_out["early_area_plus_tv"].cpu())
+                score_parts.append(
+                    compute_window_area_plus_tv(
+                        eval_out["block_losses"],
+                        window_k=pair_score_k,
+                        tv_weight=tv_weight,
+                    ).cpu()
+                )
             scores = torch.cat(score_parts, dim=0).view(idx.size(0), len(chunk_pairs)).mean(dim=0).double()
             pair_score_sums[start : start + len(chunk_pairs)] += scores
         pair_score_counts += 1
@@ -248,6 +307,73 @@ def longest_contiguous_run(order):
     return best
 
 
+def aggregate_top_pairs_to_segments(top_pairs, num_blocks, top_k, max_segment_len):
+    top_k = max(1, min(int(top_k), len(top_pairs)))
+    max_segment_len = max(2, int(max_segment_len))
+    next_map = {}
+    prev_map = {}
+
+    def trace_segment_start(node):
+        while node in prev_map:
+            node = prev_map[node]
+        return node
+
+    def build_segment_from_start(start):
+        values = [start]
+        seen = {start}
+        node = start
+        while node in next_map:
+            node = next_map[node]
+            if node in seen:
+                break
+            values.append(node)
+            seen.add(node)
+        return values
+
+    for pair in top_pairs[:top_k]:
+        first = int(pair["first"])
+        second = int(pair["second"])
+        if first == second:
+            continue
+        if first in next_map or second in prev_map:
+            continue
+        if next_map.get(second) == first or prev_map.get(first) == second:
+            continue
+        start_first = trace_segment_start(first)
+        start_second = trace_segment_start(second)
+        if start_first == start_second:
+            continue
+
+        seg_first = build_segment_from_start(start_first)
+        seg_second = build_segment_from_start(start_second)
+        merged_len = len(seg_first) + len(seg_second)
+        if merged_len > max_segment_len:
+            continue
+
+        next_map[first] = second
+        prev_map[second] = first
+
+    starts = [node for node in range(num_blocks) if node not in prev_map and node in next_map]
+    segments = []
+    used_nodes = set()
+    for start in starts:
+        segment = build_segment_from_start(start)
+        if len(segment) >= 2:
+            segments.append(segment)
+            used_nodes.update(segment)
+
+    segments.sort(key=lambda values: (-len(values), values[0], values[-1]))
+    return [
+        {
+            "segment": [int(v) for v in values],
+            "length": int(len(values)),
+            "first": int(values[0]),
+            "last": int(values[-1]),
+        }
+        for values in segments
+    ]
+
+
 def adjacent_pair_count(orders):
     shifted = orders[:, 1:] - orders[:, :-1]
     return (shifted == 1).sum(dim=1).float()
@@ -271,6 +397,35 @@ def build_pair_prefix_order(num_blocks, top_pairs, generator, device):
         ],
         dim=0,
     )
+
+
+def build_segment_guided_order(num_blocks, segments, prefix_len, generator, device):
+    if not segments:
+        return torch.randperm(num_blocks, generator=generator, device=device)
+
+    chosen_segments = []
+    used = set()
+    shuffled_segment_indices = torch.randperm(len(segments), generator=generator, device=device).tolist()
+    prefix_budget = max(2, min(prefix_len, num_blocks))
+    for seg_idx in shuffled_segment_indices:
+        segment = segments[seg_idx]["segment"]
+        if any(value in used for value in segment):
+            continue
+        if sum(len(seg["segment"]) for seg in chosen_segments) + len(segment) > prefix_budget:
+            continue
+        chosen_segments.append(segments[seg_idx])
+        used.update(segment)
+        if sum(len(seg["segment"]) for seg in chosen_segments) >= prefix_budget:
+            break
+
+    prefix_values = []
+    for segment in chosen_segments:
+        prefix_values.extend(segment["segment"])
+    remaining = [idx for idx in range(num_blocks) if idx not in used]
+    remaining_tensor = torch.tensor(remaining, device=device)
+    perm = torch.randperm(remaining_tensor.numel(), generator=generator, device=device)
+    prefix_tensor = torch.tensor(prefix_values, device=device, dtype=torch.long)
+    return torch.cat([prefix_tensor, remaining_tensor[perm]], dim=0)
 
 
 def build_chain_prefix_order(num_blocks, pair_score_matrix, top_pairs, segment_len, generator, device):
@@ -324,18 +479,32 @@ def build_prefix_biased_order(num_blocks, pair_score_matrix, prefix_len, generat
     return torch.cat([torch.tensor(prefix, device=device), remaining_tensor[perm]], dim=0)
 
 
-def build_candidate_pool(num_blocks, pair_score_matrix, top_pairs, structured_pool_size, random_pool_size, prefix_len, segment_len, generator, device):
+def build_candidate_pool(
+    num_blocks,
+    pair_score_matrix,
+    top_pairs,
+    segments,
+    structured_pool_size,
+    random_pool_size,
+    prefix_len,
+    segment_len,
+    generator,
+    device,
+):
     top_pairs = top_pairs[: max(1, min(len(top_pairs), 128))]
     structured_orders = []
     per_group = max(1, structured_pool_size // 4)
     for _ in range(per_group):
         structured_orders.append(torch.randperm(num_blocks, generator=generator, device=device))
     for _ in range(per_group):
-        structured_orders.append(build_pair_prefix_order(num_blocks, top_pairs, generator, device))
+        structured_orders.append(build_segment_guided_order(num_blocks, segments, prefix_len, generator, device))
     for _ in range(per_group):
         structured_orders.append(build_chain_prefix_order(num_blocks, pair_score_matrix, top_pairs, segment_len, generator, device))
     while len(structured_orders) < structured_pool_size:
-        structured_orders.append(build_prefix_biased_order(num_blocks, pair_score_matrix, prefix_len, generator, device))
+        if len(structured_orders) % 2 == 0:
+            structured_orders.append(build_pair_prefix_order(num_blocks, top_pairs, generator, device))
+        else:
+            structured_orders.append(build_prefix_biased_order(num_blocks, pair_score_matrix, prefix_len, generator, device))
     random_orders = [
         torch.randperm(num_blocks, generator=generator, device=device)
         for _ in range(random_pool_size)
@@ -371,12 +540,18 @@ def main():
         tokens=tokens,
         batch_size=int(args.batch_size),
         num_batches=int(args.pair_mining_batches),
-        early_k=early_k,
+        pair_score_k=int(args.pair_score_k),
         tv_weight=float(args.tv_weight),
         device=args.device,
         autocast_context=autocast_context,
         seed=int(args.seed),
         pair_eval_batch_size=int(args.pair_eval_batch_size),
+    )
+    aggregated_segments = aggregate_top_pairs_to_segments(
+        top_pairs,
+        num_blocks=model.num_blocks,
+        top_k=int(args.aggregate_top_k_pairs),
+        max_segment_len=int(args.segment_len),
     )
 
     rng = np.random.default_rng(args.seed + 101)
@@ -401,6 +576,7 @@ def main():
             num_blocks=model.num_blocks,
             pair_score_matrix=pair_score_matrix,
             top_pairs=top_pairs_for_generation,
+            segments=aggregated_segments,
             structured_pool_size=int(args.structured_pool_size),
             random_pool_size=int(args.random_pool_size),
             prefix_len=int(args.prefix_len),
@@ -424,6 +600,7 @@ def main():
                 early_k=early_k,
                 tv_weight=float(args.tv_weight),
                 autocast_context=autocast_context,
+                eval_batch_size=int(args.candidate_eval_batch_size),
             )
             return {
                 "orders": tiled_orders,
@@ -501,10 +678,12 @@ def main():
         "num_batches": args.num_batches,
         "pair_mining_batches": args.pair_mining_batches,
         "pair_eval_batch_size": args.pair_eval_batch_size,
+        "pair_score_k": args.pair_score_k,
         "candidate_eval_batch_size": args.candidate_eval_batch_size,
         "random_pool_size": args.random_pool_size,
         "structured_pool_size": args.structured_pool_size,
         "top_pair_pool_size": args.top_pair_pool_size,
+        "aggregate_top_k_pairs": args.aggregate_top_k_pairs,
         "prefix_len": args.prefix_len,
         "segment_len": args.segment_len,
         "early_k": early_k,
@@ -514,14 +693,17 @@ def main():
         "dtype": args.dtype,
         "note": (
             "Local structure is mined from ordered pairs under the frozen checkpoint. "
-            "A structured candidate pool is then built from random, pair-biased, chain-biased, "
-            "and prefix-biased proposals, and compared against a pure-random candidate pool."
+            "Pair scores are computed from the first pair_score_k block reveal steps using area + tv. "
+            "Top pairs are then greedily aggregated into consistent directed segments. "
+            "A structured candidate pool is then built from random, segment-guided, chain-biased, "
+            "pair-biased, and prefix-biased proposals, and compared against a pure-random candidate pool."
         ),
     }
     payload = {
         "run_meta": run_meta,
         "summaries": summaries,
         "top_pairs": top_pair_rows,
+        "aggregated_segments": aggregated_segments,
     }
     save_json(args.out_dir / "results.json", payload)
     print(f"saved structured candidate benchmark to {args.out_dir / 'results.json'}")

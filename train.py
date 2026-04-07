@@ -22,6 +22,7 @@ import math
 import pickle
 import csv
 import sys
+import json
 from contextlib import nullcontext
 
 import numpy as np
@@ -103,8 +104,14 @@ eval_generate_step_loss_log = True
 eval_generate_step_batches = 200
 eval_generate_step_loss_filename = 'generate_step_block_loss_latest.png'
 order_head_lr_mult = 5.0
+use_order_head = True
 train_stage = 'standard' # 'standard', 'order_head', 'policy_backbone', 'joint', 'local_swap_eval'
 block_order_block_len = 16
+segment_guided_ratio = 0.0
+segment_source_json = ''
+segment_top_k_pairs = 64
+segment_max_len = 4
+segment_max_units_per_order = 2
 policy_prefix_k = 4
 utility_horizon = 4
 utility_alpha = 1.0
@@ -271,6 +278,12 @@ if block_size < model.config.block_size:
     model_args['block_size'] = block_size # so that the checkpoint will have the right value
 model.to(device)
 
+if not use_order_head and train_stage in ('order_head', 'policy_backbone', 'joint'):
+    raise ValueError(
+        f"use_order_head=False is incompatible with train_stage='{train_stage}'. "
+        "Use train_stage='standard' or enable order head."
+    )
+
 step_mean_baseline = torch.zeros(num_blocks, device=device, dtype=torch.float32)
 step_var_baseline = torch.zeros(num_blocks, device=device, dtype=torch.float32)
 baseline_initialized = False
@@ -281,8 +294,141 @@ if init_from == 'resume' and resume_optimizer_state:
         step_var_baseline = torch.tensor(baseline_state['step_var'], device=device, dtype=torch.float32)
         baseline_initialized = bool(baseline_state.get('initialized', True))
 
+
+def _aggregate_top_pairs_to_segments(top_pairs, num_blocks_local, top_k, max_segment_len):
+    top_k = max(1, min(int(top_k), len(top_pairs)))
+    max_segment_len = max(2, int(max_segment_len))
+    next_map = {}
+    prev_map = {}
+
+    def trace_start(node):
+        while node in prev_map:
+            node = prev_map[node]
+        return node
+
+    def build_segment(start):
+        values = [start]
+        seen = {start}
+        node = start
+        while node in next_map:
+            node = next_map[node]
+            if node in seen:
+                break
+            values.append(node)
+            seen.add(node)
+        return values
+
+    for pair in top_pairs[:top_k]:
+        first = int(pair["first"])
+        second = int(pair["second"])
+        if first == second:
+            continue
+        if first in next_map or second in prev_map:
+            continue
+        start_first = trace_start(first)
+        start_second = trace_start(second)
+        if start_first == start_second:
+            continue
+        seg_first = build_segment(start_first)
+        seg_second = build_segment(start_second)
+        if len(seg_first) + len(seg_second) > max_segment_len:
+            continue
+        next_map[first] = second
+        prev_map[second] = first
+
+    starts = [node for node in range(num_blocks_local) if node not in prev_map and node in next_map]
+    segments = []
+    for start in starts:
+        values = build_segment(start)
+        if len(values) >= 2:
+            segments.append(values)
+    segments.sort(key=lambda values: (-len(values), values[0], values[-1]))
+    return segments
+
+
+def _load_segment_library(segment_json_path):
+    if not segment_json_path:
+        return []
+    if not os.path.exists(segment_json_path):
+        raise FileNotFoundError(f"segment_source_json not found: {segment_json_path}")
+    with open(segment_json_path, 'r', encoding='utf-8') as handle:
+        payload = json.load(handle)
+    raw_segments = payload.get('aggregated_segments')
+    if raw_segments:
+        segments = [
+            [int(v) for v in row["segment"]]
+            for row in raw_segments
+            if len(row.get("segment", [])) >= 2
+        ]
+    else:
+        top_pairs = payload.get('top_pairs', [])
+        segments = _aggregate_top_pairs_to_segments(
+            top_pairs,
+            num_blocks_local=num_blocks,
+            top_k=segment_top_k_pairs,
+            max_segment_len=segment_max_len,
+        )
+    cleaned = []
+    for segment in segments:
+        if any(v < 0 or v >= num_blocks for v in segment):
+            continue
+        if len(segment) >= 2:
+            cleaned.append(segment)
+    return cleaned
+
+
+segment_library = _load_segment_library(segment_source_json)
+if master_process and segment_guided_ratio > 0.0:
+    if len(segment_library) == 0:
+        print(
+            f"warning: segment_guided_ratio={segment_guided_ratio} but no usable segments "
+            f"were loaded from {segment_source_json or '[none]'}; falling back to pure random orders."
+        )
+    else:
+        print(
+            f"loaded {len(segment_library)} aggregated segments "
+            f"for segment-guided random training from {segment_source_json or '[none]'}"
+        )
+
+
+def _sample_mixed_segment_guided_block_orders(batch_size_local, device_local):
+    orders = []
+    for _ in range(batch_size_local):
+        if len(segment_library) == 0 or np.random.random() >= float(segment_guided_ratio):
+            orders.append(torch.randperm(num_blocks, device=device_local))
+            continue
+
+        shuffled_segment_indices = np.random.permutation(len(segment_library)).tolist()
+        chosen_segments = []
+        used_blocks = set()
+        for seg_idx in shuffled_segment_indices:
+            segment = segment_library[seg_idx]
+            if len(chosen_segments) >= int(segment_max_units_per_order):
+                break
+            if any(value in used_blocks for value in segment):
+                continue
+            chosen_segments.append(segment)
+            used_blocks.update(segment)
+
+        units = []
+        for segment in chosen_segments:
+            units.append(list(segment))
+        for block_idx in range(num_blocks):
+            if block_idx not in used_blocks:
+                units.append([block_idx])
+
+        unit_perm = np.random.permutation(len(units)).tolist()
+        order = []
+        for unit_idx in unit_perm:
+            order.extend(units[unit_idx])
+        orders.append(torch.tensor(order, device=device_local, dtype=torch.long))
+    return torch.stack(orders, dim=0)
+
 def set_train_stage_requires_grad(module, stage):
     for name, param in module.named_parameters():
+        if not use_order_head and name.startswith('policy_order_head.'):
+            param.requires_grad = False
+            continue
         if stage == 'order_head':
             param.requires_grad = name.startswith('policy_order_head.')
         elif stage == 'policy_backbone':
@@ -1146,8 +1292,28 @@ while True:
                 latest_policy_train_stats["ao_loss"] = float(ao_loss.detach().item())
                 latest_policy_train_stats["total_loss"] = float(total_loss.detach().item())
             else:
-                logits, loss = model(X, mode=aogpt_train_mode)
-                latest_policy_train_stats = None
+                if (
+                    train_stage == 'standard'
+                    and aogpt_train_mode == 'Random'
+                    and float(segment_guided_ratio) > 0.0
+                    and len(segment_library) > 0
+                ):
+                    mixed_block_orders = _sample_mixed_segment_guided_block_orders(
+                        X.size(0),
+                        X.device,
+                    )
+                    mixed_token_orders = expand_block_orders_to_token_orders(
+                        mixed_block_orders,
+                        block_len=block_order_block_len,
+                    )
+                    logits, loss = model(X, mode=None, orders=mixed_token_orders)
+                    latest_policy_train_stats = {
+                        "segment_guided_ratio": float(segment_guided_ratio),
+                        "segment_library_size": float(len(segment_library)),
+                    }
+                else:
+                    logits, loss = model(X, mode=aogpt_train_mode)
+                    latest_policy_train_stats = None
             loss = loss / gradient_accumulation_steps
         # immediately async prefetch next batch while model is doing the forward pass on the GPU
         X, Y = get_batch('train')
