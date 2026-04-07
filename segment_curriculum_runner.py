@@ -1,4 +1,5 @@
 import argparse
+import json
 import shlex
 import subprocess
 import sys
@@ -14,6 +15,23 @@ def run_command(cmd, cwd):
     print("[runner] exec:")
     print("  " + " ".join(shlex.quote(str(part)) for part in cmd))
     subprocess.run(cmd, cwd=str(cwd), check=True)
+
+
+def load_runner_config_from_argv(argv):
+    config_ns = {}
+    filtered = []
+    config_path = None
+    for arg in argv:
+        if "=" not in arg and not arg.startswith("--") and config_path is None:
+            config_path = Path(arg)
+        else:
+            filtered.append(arg)
+    if config_path is not None:
+        print(f"Overriding runner config with {config_path}:")
+        with open(config_path, "r", encoding="utf-8") as handle:
+            print(handle.read())
+        exec(config_path.read_text(encoding="utf-8"), config_ns)
+    return config_ns, filtered
 
 
 def build_train_cmd(
@@ -88,6 +106,7 @@ def build_benchmark_cmd(
 
 
 def parse_args():
+    config_ns, filtered_argv = load_runner_config_from_argv(sys.argv[1:])
     parser = argparse.ArgumentParser(
         description=(
             "Stage-wise curriculum runner: train random backbone, mine structured segments, "
@@ -97,50 +116,53 @@ def parse_args():
     parser.add_argument(
         "--config",
         type=Path,
-        default=Path("config/WikiText103/block32/standard/random.py"),
+        default=Path(config_ns.get("config", "config/WikiText103/block32/standard/random.py")),
     )
     parser.add_argument(
         "--train_out_dir",
         type=str,
-        default="out-wikitext103-random-b32-curriculum",
+        default=config_ns.get("train_out_dir", "out-wikitext103-random-b32-curriculum"),
     )
     parser.add_argument(
         "--benchmark_root",
         type=Path,
-        default=Path("Report/segment_curriculum_b32"),
+        default=Path(config_ns.get("benchmark_root", "Report/segment_curriculum_b32")),
     )
-    parser.add_argument("--warmup_iters", type=int, default=4000)
-    parser.add_argument("--stage_iters", type=int, default=4000)
-    parser.add_argument("--num_curriculum_stages", type=int, default=2)
+    parser.add_argument("--warmup_iters", type=int, default=int(config_ns.get("warmup_iters", 4000)))
+    parser.add_argument("--stage_iters", type=int, default=int(config_ns.get("stage_iters", 4000)))
+    parser.add_argument("--num_curriculum_stages", type=int, default=int(config_ns.get("num_curriculum_stages", 2)))
     parser.add_argument(
         "--segment_guided_ratios",
         type=str,
-        default="0.3,0.5",
+        default=str(config_ns.get("segment_guided_ratios", "0.3,0.5")),
         help="Comma-separated ratios, one per curriculum stage.",
     )
     parser.add_argument(
         "--segment_max_lens",
         type=str,
-        default="4,6",
+        default=str(config_ns.get("segment_max_lens", "4,6")),
         help="Comma-separated max segment lengths, one per curriculum stage.",
     )
-    parser.add_argument("--segment_max_units_per_order", type=int, default=2)
-    parser.add_argument("--segment_top_k_pairs", type=int, default=64)
+    parser.add_argument("--segment_max_units_per_order", type=int, default=int(config_ns.get("segment_max_units_per_order", 2)))
+    parser.add_argument("--segment_top_k_pairs", type=int, default=int(config_ns.get("segment_top_k_pairs", 64)))
     parser.add_argument("--disable_order_head", action="store_true")
-    parser.add_argument("--benchmark_batch_size", type=int, default=64)
-    parser.add_argument("--benchmark_num_batches", type=int, default=200)
-    parser.add_argument("--pair_mining_batches", type=int, default=24)
-    parser.add_argument("--pair_eval_batch_size", type=int, default=8)
-    parser.add_argument("--candidate_eval_batch_size", type=int, default=64)
-    parser.add_argument("--random_pool_size", type=int, default=64)
-    parser.add_argument("--structured_pool_size", type=int, default=64)
-    parser.add_argument("--top_pair_pool_size", type=int, default=128)
-    parser.add_argument("--aggregate_top_k_pairs", type=int, default=64)
-    parser.add_argument("--prefix_len", type=int, default=8)
-    parser.add_argument("--pair_score_k", type=int, default=2)
-    parser.add_argument("--tv_weight", type=float, default=0.3)
-    parser.add_argument("--benchmark_log_every_batches", type=int, default=10)
-    return parser.parse_args()
+    parser.add_argument("--benchmark_batch_size", type=int, default=int(config_ns.get("benchmark_batch_size", 64)))
+    parser.add_argument("--benchmark_num_batches", type=int, default=int(config_ns.get("benchmark_num_batches", 200)))
+    parser.add_argument("--pair_mining_batches", type=int, default=int(config_ns.get("pair_mining_batches", 24)))
+    parser.add_argument("--pair_eval_batch_size", type=int, default=int(config_ns.get("pair_eval_batch_size", 8)))
+    parser.add_argument("--candidate_eval_batch_size", type=int, default=int(config_ns.get("candidate_eval_batch_size", 64)))
+    parser.add_argument("--random_pool_size", type=int, default=int(config_ns.get("random_pool_size", 64)))
+    parser.add_argument("--structured_pool_size", type=int, default=int(config_ns.get("structured_pool_size", 64)))
+    parser.add_argument("--top_pair_pool_size", type=int, default=int(config_ns.get("top_pair_pool_size", 128)))
+    parser.add_argument("--aggregate_top_k_pairs", type=int, default=int(config_ns.get("aggregate_top_k_pairs", 64)))
+    parser.add_argument("--prefix_len", type=int, default=int(config_ns.get("prefix_len", 8)))
+    parser.add_argument("--pair_score_k", type=int, default=int(config_ns.get("pair_score_k", 2)))
+    parser.add_argument("--tv_weight", type=float, default=float(config_ns.get("tv_weight", 0.3)))
+    parser.add_argument("--benchmark_log_every_batches", type=int, default=int(config_ns.get("benchmark_log_every_batches", 10)))
+    args = parser.parse_args(filtered_argv)
+    if bool(config_ns.get("disable_order_head", False)):
+        args.disable_order_head = True
+    return args
 
 
 def main():
@@ -235,7 +257,7 @@ def main():
         "disable_order_head": bool(args.disable_order_head),
     }
     (benchmark_root / "runner_meta.json").write_text(
-        __import__("json").dumps(final_payload, ensure_ascii=False, indent=2),
+        json.dumps(final_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     print(f"[runner] finished segment curriculum; meta saved to {benchmark_root / 'runner_meta.json'}")
