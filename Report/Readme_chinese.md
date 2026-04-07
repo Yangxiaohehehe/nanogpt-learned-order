@@ -696,3 +696,231 @@ U_t = -\alpha \tilde{A}_t - \beta \tilde{V}_t
 > 因此，下一阶段的关键问题不再是“有没有这样的信号”，而是“如何把这些信号以 preference / curriculum 的方式稳定传播到训练过程中，让模型逐步形成偏向 l2r 的 order policy”。
 
 ---
+
+## 17. 最新完整实验流程：层级结构挖掘 + 分阶段 curriculum
+
+在前面的结果基础上，当前最新的一条主线已经从“直接恢复全局顺序”转向：
+
+> 先用当前 checkpoint 挖掘稳定的局部结构，再把这些结构逐阶段反馈回后续训练。
+
+这条流程由两个脚本组成：
+
+- 结构挖掘：[`hierarchical_structured_benchmark.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/hierarchical_structured_benchmark.py)
+- 分阶段训练调度：[`segment_curriculum_runner.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/segment_curriculum_runner.py)
+
+### 17.1 整体流程
+
+完整流程如下：
+
+1. 先按普通 `Random` 方式从头训练一个 backbone
+2. 训练到 warmup 阶段结束，例如 `4000` steps
+3. 用当前 checkpoint 跑结构挖掘 benchmark
+4. 对所有 ordered pair 做 `pair2` 评分
+5. 根据评分排序得到 `top pairs`
+6. 把可以同向延展的 top pairs 聚合成 `segments`
+7. 下一阶段 resume 训练时，不再是纯 random，而是混合：
+   - pure random orders
+   - segment-guided random orders
+8. 再训练一段，例如再 `4000` steps
+9. 再次用新的 checkpoint 跑结构挖掘
+10. 重新得到新的 pairs / segments
+11. 继续进入下一阶段
+
+也就是说，这不是一次性固定结构，而是：
+
+> random warmup -> 结构挖掘 -> 混合训练 -> 重新挖掘 -> 再混合训练
+
+---
+
+### 17.2 `pair2` 打分到底是什么
+
+在当前配置中，局部结构挖掘的核心不是完整顺序评分，而是 **pair2**：
+
+- 固定两个有序单元 `(A, B)` 放在最前面
+- 后续其余单元随机补全
+- 跑模型
+- 只看前两个单元对应的 `area + tv`
+
+注意这里的“单元”在不同层次上含义不同：
+
+- 第 0 层：单元就是原始 block
+- 第 1 层以后：单元可以是聚合出来的 segment
+
+所以虽然形式上始终是 `pair2`，但比较对象会越来越大。
+
+当前默认配置是：
+
+- `pair_score_k = 2`
+- `tv_weight = 0.3`
+
+也就是说：
+
+> 当前 ordered pair 的分数，是前两个单元的平均 loss（area）与平滑项（tv）的加权和。
+
+---
+
+### 17.3 top pairs 如何聚合成 segment
+
+当前聚合规则是：
+
+1. 先按 pair 分数和相对反向的 `margin_vs_reverse` 排序
+2. 只取前 `aggregate_top_k_pairs` 个 pair 参与聚合
+3. 依次尝试把 pair 拼接成更长的 directed segment
+
+例如：
+
+- 如果已有 `(7,8)`，又出现 `(8,9)`，就可以延展成 `[7,8,9]`
+- 如果出现 `(8,7)`，因为方向冲突，就跳过
+- 如果出现重复占用、成环、或超过当前阶段允许的最大长度，也跳过
+
+当前 block32 preset 下：
+
+- `aggregate_top_k_pairs = 64`
+
+这意味着：
+
+> 只用 top 64 的高分 pair 尝试聚合，不会使用全部 pair。
+
+而且这 64 个 pair 也不是全都会被保留，只有满足：
+
+- 方向一致
+- 不冲突
+- 可合法延展
+- 不超过最大长度
+
+的 pair 才会真正进入 segment。
+
+---
+
+### 17.4 为什么要分层
+
+如果只在原始 `32` 个 block 上做完整顺序搜索，空间太大；  
+如果只做一次 pair 聚合，表达能力又太弱。
+
+所以当前最新版本引入了层级结构：
+
+- Level 0: 原始 block 作为 unit
+- Level 1: 聚合出的 segment 作为新 unit
+- Level 2: segment of segments 再作为更高层 unit
+
+因此它解决的不是“直接命中 l2r”，而是：
+
+> 逐层提高命中 `l2r-like local structure` 的概率。
+
+这也是当前实验从 flat order space 转向 hierarchical unit space 的原因。
+
+---
+
+### 17.5 当前分阶段训练里 order head 的角色
+
+当前这条最新路线里，**第一阶段并不依赖 order head**。
+
+训练中已经加入了：
+
+- `use_order_head = False`
+
+所以当前 curriculum 的主角不是 order head，而是：
+
+- 结构挖掘
+- segment 聚合
+- segment-guided random training
+
+也就是说：
+
+> 当前优先验证的是“结构化训练分布是否有效”，而不是“order head 是否能直接学出全局顺序”。
+
+如果这条线证明有效，后续再考虑让 order head 去近似这种结构化 proposal。
+
+---
+
+### 17.6 关键参数解释
+
+当前这套流程最关键的参数有：
+
+#### 训练阶段参数
+
+- `warmup_iters`
+  - 纯 random warmup 的步数
+- `stage_iters`
+  - 每个 curriculum 阶段额外训练的步数
+- `num_curriculum_stages`
+  - 要循环多少个阶段
+
+#### 结构注入强度
+
+- `segment_guided_ratios`
+  - 每阶段多少比例使用 segment-guided random
+  - 例如 `0.3,0.5`
+- `segment_max_lens`
+  - 每阶段允许的最大 segment 长度
+  - 例如 `4,6`
+- `segment_max_units_per_order`
+  - 每个训练样本最多注入多少个 segment 单元
+
+#### pair 挖掘参数
+
+- `pair_score_k`
+  - pair 打分看前几个单元，当前为 `2`
+- `pair_mining_batches`
+  - 每个 pair 在多少个 batch 上平均
+- `pair_eval_batch_size`
+  - pair 评估 forward 分块大小，用于防止 OOM
+
+#### 结构聚合参数
+
+- `aggregate_top_k_pairs`
+  - 前多少个 top pairs 参与 segment 聚合
+- `top_pair_pool_size`
+  - 构造 structured pool 时，会参考前多少个 top pairs
+
+---
+
+### 17.7 当前推荐运行方式
+
+当前已经提供了一个 runner 配置文件：
+
+- [`segment_curriculum.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/config/WikiText103/block32/standard/segment_curriculum.py)
+
+直接运行：
+
+```bash
+source /home/devbox/project/bin/activate && \
+cd /home/devbox/project/AOGPT-test-order/nanogpt_learned_order && \
+python segment_curriculum_runner.py \
+  config/WikiText103/block32/standard/segment_curriculum.py
+```
+
+这会执行：
+
+1. block32 random warmup
+2. 跑结构 benchmark
+3. 用当前 top pairs / segments 继续做 segment-guided mixed training
+4. 再次挖结构
+5. 再次继续训练
+
+当前默认 preset 是：
+
+- warmup `4000`
+- 再做 `2` 个 curriculum stages
+- ratio 为 `0.3 -> 0.5`
+- segment 最大长度 `4 -> 6`
+- `disable_order_head = True`
+
+---
+
+### 17.8 当前这条实验线的意义
+
+这条最新流程的真正目标不是：
+
+- 直接恢复 exact l2r
+- 或直接训练一个 order head 输出完整顺序
+
+而是：
+
+> 让模型在每个阶段都把自己已经学到的局部结构，转化成下一阶段训练分布中的偏置，从而逐步形成更接近 l2r-like 的 order bias。
+
+一句话总结就是：
+
+> 当前最新实验线是一个“结构挖掘 -> 结构聚合 -> curriculum 反馈 -> 再挖掘”的自举式顺序学习流程。
+
+---

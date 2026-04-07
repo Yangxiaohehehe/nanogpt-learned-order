@@ -700,3 +700,233 @@ At this point, the project has converged to a much clearer picture:
 > Therefore, the key question of the next stage is no longer “whether such a signal exists,” but rather “how to propagate this signal during training, in a preference-style or curriculum-style way, so that the model gradually forms an order policy biased toward l2r.”
 
 ---
+
+## 17. Latest Full Experimental Workflow: Hierarchical Structure Mining + Stage-wise Curriculum
+
+Based on the results above, the latest main line has shifted away from “directly recover the global order” and toward:
+
+> first mine stable local structure from the current checkpoint, then feed that structure back into subsequent training stages.
+
+This workflow currently uses two scripts:
+
+- structure mining: [`hierarchical_structured_benchmark.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/hierarchical_structured_benchmark.py)
+- stage-wise training orchestration: [`segment_curriculum_runner.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/segment_curriculum_runner.py)
+
+### 17.1 Overall workflow
+
+The full workflow is:
+
+1. train a backbone from scratch with ordinary `Random` order
+2. stop after a warmup stage, e.g. `4000` steps
+3. run the structure-mining benchmark on the current checkpoint
+4. score all ordered pairs with `pair2`
+5. rank all pairs to obtain `top pairs`
+6. greedily aggregate compatible top pairs into `segments`
+7. resume training, but now mix:
+   - pure random orders
+   - segment-guided random orders
+8. train for another stage, e.g. another `4000` steps
+9. run structure mining again on the new checkpoint
+10. extract new pairs / segments
+11. continue to the next stage
+
+So this is not a one-shot static structure injection. It is:
+
+> random warmup -> structure mining -> mixed curriculum training -> re-mining -> mixed training again
+
+---
+
+### 17.2 What exactly is `pair2` scoring
+
+The local structure mining stage is based on **pair2**, not on full-order scoring.
+
+For each ordered pair of units `(A, B)`:
+
+- place `(A, B)` at the beginning
+- randomly complete the remaining units
+- run the frozen model
+- score only the first two units with `area + tv`
+
+The meaning of “unit” changes by level:
+
+- at level 0, a unit is a single original block
+- at later levels, a unit may itself be an aggregated segment
+
+So even though the form always remains `pair2`, the compared object becomes larger and more structured over time.
+
+The current default setup is:
+
+- `pair_score_k = 2`
+- `tv_weight = 0.3`
+
+That is:
+
+> the score of an ordered pair is the weighted combination of average loss (`area`) and smoothness (`tv`) over the first two units.
+
+---
+
+### 17.3 How top pairs are aggregated into segments
+
+The current aggregation rule is:
+
+1. rank pairs by score and `margin_vs_reverse`
+2. only use the top `aggregate_top_k_pairs` pairs for aggregation
+3. greedily extend consistent directed chains
+
+For example:
+
+- if `(7,8)` is already selected and `(8,9)` also appears, they can be merged into `[7,8,9]`
+- if `(8,7)` appears, it is skipped because it conflicts with the direction
+- if a pair would create overlap, a cycle, or exceed the current maximum length, it is skipped
+
+In the current block32 preset:
+
+- `aggregate_top_k_pairs = 64`
+
+So:
+
+> only the top 64 ranked pairs are considered for segment aggregation, not all pairs.
+
+And even among those 64, only pairs that satisfy:
+
+- directional consistency
+- no conflict
+- valid extendability
+- no length overflow
+
+will actually enter the final segment set.
+
+---
+
+### 17.4 Why the workflow is hierarchical
+
+If we stay in the original 32-block space and search over full orders, the space is too large.  
+If we only do a single round of pair aggregation, the representation is too weak.
+
+So the latest version introduces hierarchical structure:
+
+- Level 0: raw blocks are the units
+- Level 1: aggregated segments become the new units
+- Level 2: segments of segments become higher-level units
+
+Thus the goal is no longer “directly hit l2r,” but:
+
+> progressively increase the probability of hitting `l2r-like local structure`.
+
+This is why the experiment moves from a flat order space into a hierarchical unit space.
+
+---
+
+### 17.5 The role of the order head in the current workflow
+
+In the current version of this latest workflow, **the first stage does not rely on the order head**.
+
+The training pipeline now supports:
+
+- `use_order_head = False`
+
+So the main actors of the current curriculum are:
+
+- structure mining
+- segment aggregation
+- segment-guided random training
+
+That means:
+
+> the current priority is to validate whether a structured training distribution itself is effective, rather than whether the order head can already recover a global order.
+
+If this path proves effective, the order head can later be reintroduced as an approximator of the structured proposal mechanism.
+
+---
+
+### 17.6 Key parameter meanings
+
+The most important parameters in the current workflow are:
+
+#### Training-stage control
+
+- `warmup_iters`
+  - number of pure-random warmup steps
+- `stage_iters`
+  - additional training steps for each curriculum stage
+- `num_curriculum_stages`
+  - number of curriculum cycles
+
+#### Structure injection strength
+
+- `segment_guided_ratios`
+  - the fraction of segment-guided random orders used in each stage
+  - e.g. `0.3,0.5`
+- `segment_max_lens`
+  - the maximum segment length allowed in each stage
+  - e.g. `4,6`
+- `segment_max_units_per_order`
+  - the maximum number of injected segment units per training sample
+
+#### Pair mining
+
+- `pair_score_k`
+  - how many units are used in pair scoring; currently `2`
+- `pair_mining_batches`
+  - how many batches each pair is averaged over
+- `pair_eval_batch_size`
+  - chunk size used during pair evaluation to avoid OOM
+
+#### Structure aggregation
+
+- `aggregate_top_k_pairs`
+  - how many top pairs participate in segment aggregation
+- `top_pair_pool_size`
+  - how many top pairs are used when building the structured candidate pool
+
+---
+
+### 17.7 Recommended way to run it
+
+A runner preset is already provided:
+
+- [`segment_curriculum.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/config/WikiText103/block32/standard/segment_curriculum.py)
+
+Run:
+
+```bash
+source /home/devbox/project/bin/activate && \
+cd /home/devbox/project/AOGPT-test-order/nanogpt_learned_order && \
+python segment_curriculum_runner.py \
+  config/WikiText103/block32/standard/segment_curriculum.py
+```
+
+This will perform:
+
+1. block32 random warmup
+2. structure benchmark
+3. segment-guided mixed training using the current top pairs / segments
+4. another structure benchmark
+5. another round of mixed training
+
+The current default preset is:
+
+- warmup `4000`
+- then `2` curriculum stages
+- ratio schedule `0.3 -> 0.5`
+- segment max length `4 -> 6`
+- `disable_order_head = True`
+
+---
+
+### 17.8 What this workflow is trying to achieve
+
+The goal of this latest line is **not**:
+
+- to directly recover exact l2r
+- or to immediately train an order head that outputs the final global order
+
+Instead, the goal is:
+
+> at each stage, turn the local structure already learned by the current model into a bias in the next stage’s training distribution, so that the model gradually develops a more l2r-like order bias.
+
+In one sentence:
+
+> the latest workflow is a self-bootstrapping order-learning loop built from structure mining -> structure aggregation -> curriculum feedback -> re-mining.
+
+---
