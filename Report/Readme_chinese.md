@@ -924,3 +924,126 @@ python segment_curriculum_runner.py \
 > 当前最新实验线是一个“结构挖掘 -> 结构聚合 -> curriculum 反馈 -> 再挖掘”的自举式顺序学习流程。
 
 ---
+
+### 17.9 block16 / block32 / block64 分阶段实验结果总结
+
+目前已经完成了三档 curriculum 实验：
+
+- [`segment_curriculum_b16`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16)
+- [`segment_curriculum_b32`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32)
+- [`segment_curriculum_b64`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64)
+
+三档实验的共同结论是：
+
+- `structured pool` 都稳定优于 `random pool`
+- 模型都能学到明显的局部连续结构
+- 随着 block 数增大，问题逐渐从“有没有结构”转向“如何把多个局部结构整合成更干净的全局顺序”
+
+#### block16
+
+文件：
+
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/stage_02/results.json)
+- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/block_aggregation_trace.json)
+
+结果特点：
+
+- `stage_02` 的 `structured` 明显优于 `random`
+- `mean_adjacent_pairs = 1.748` vs `1.009`
+- `mean_longest_run = 2.201` vs `1.705`
+- `mean_early_area_plus_tv = -4.120` vs `-4.146`
+
+最终聚合结构非常干净，主要形成：
+
+- `[0,1,2,3]`
+- `[5,6,7,8]`
+- `[9,10,11,12]`
+- `[13,14,15]`
+
+对应的最终聚合线性顺序约为：
+
+- `[0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,4]`
+
+该最终聚合顺序相对 `l2r` 的 Kendall 指标为：
+
+- `tau = 0.8167`
+- `distance = 0.0917`
+
+这说明 `block16` 下，这条流程已经能够恢复出非常接近 `l2r` 的全局结构。
+
+#### block32
+
+文件：
+
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32/stage_02/results.json)
+
+结果特点：
+
+- `stage_02` 的 `structured` 继续优于 `random`
+- `mean_adjacent_pairs = 2.799` vs `1.012`
+- `mean_longest_run = 3.044` vs `1.665`
+- `mean_kendall_tau = 0.0530` vs `0.0013`
+- `mean_early_area_plus_tv = -5.483` vs `-5.600`
+
+第二阶段已经聚出了更长的连续 segment，例如：
+
+- `[0,1,2,3,4,5]`
+- `[6,7,8,9,10]`
+- `[11,12,13,14,15,16]`
+- `[17,18,19,20,21]`
+- `[22,23,24,25,26,27]`
+
+最终聚合线性顺序相对 `l2r` 的 Kendall 指标为：
+
+- `tau = 0.6371`
+- `distance = 0.1815`
+
+这说明 `block32` 下，模型已经恢复出较强的全局顺序偏置，但 segment 之间的全局拼接仍然不是完全理想。
+
+#### block64
+
+文件：
+
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/stage_02/results.json)
+- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/block_aggregation_trace.json)
+
+结果特点：
+
+- `structured` 依然明显优于 `random`
+- `stage_02` 中：
+- `mean_adjacent_pairs = 5.506` vs `0.969`
+- `mean_longest_run = 3.398` vs `1.636`
+- `mean_early_area_plus_tv = -9.084` vs `-9.263`
+
+但同时：
+
+- `mean_kendall_tau` 没有像局部连续性那样继续明显提高
+
+这说明 `block64` 下模型仍然能学到很多强局部结构，但这些结构之间的全局整合开始变得更困难。
+
+最终聚合顺序相对 `l2r` 的 Kendall 指标为：
+
+- `tau = 0.2857`
+- `distance = 0.3571`
+
+这正说明：
+
+- `block64` 不是没有学到结构
+- 而是进入了“局部结构很强，但全局 candidate pool 仍然偏脏”的阶段
+
+#### 当前阶段性的总判断
+
+这三档结果共同说明：
+
+1. 这条 `segment curriculum` 主线不是只在小规模上成立
+2. `block16` 已经能恢复非常接近 `l2r` 的聚合顺序
+3. `block32` 是当前最平衡、最适合作为主实验线的规模
+4. `block64` 依然有明显正结果，但已经清楚暴露出下一阶段的瓶颈：
+
+- 不是 signal 不存在
+- 而是随着 block 增大，candidate pool 更容易重新变脏，需要更强的 pair prefilter、segment-first proposal 和更严格的结构筛选
+
+---

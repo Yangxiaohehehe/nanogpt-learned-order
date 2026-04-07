@@ -930,3 +930,126 @@ In one sentence:
 > the latest workflow is a self-bootstrapping order-learning loop built from structure mining -> structure aggregation -> curriculum feedback -> re-mining.
 
 ---
+
+### 17.9 Summary of the block16 / block32 / block64 curriculum results
+
+At this point, three curriculum runs have been completed:
+
+- [`segment_curriculum_b16`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16)
+- [`segment_curriculum_b32`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32)
+- [`segment_curriculum_b64`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64)
+
+The shared conclusion across all three runs is:
+
+- the `structured pool` consistently beats the `random pool`
+- the model does learn clear local contiguous structure
+- as the number of blocks grows, the bottleneck shifts from “whether structure exists” to “how to integrate multiple local structures into a cleaner global order”
+
+#### block16
+
+Files:
+
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/stage_02/results.json)
+- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/block_aggregation_trace.json)
+
+Key observations:
+
+- in `stage_02`, `structured` is clearly better than `random`
+- `mean_adjacent_pairs = 1.748` vs `1.009`
+- `mean_longest_run = 2.201` vs `1.705`
+- `mean_early_area_plus_tv = -4.120` vs `-4.146`
+
+The final aggregated structure is very clean, mainly forming:
+
+- `[0,1,2,3]`
+- `[5,6,7,8]`
+- `[9,10,11,12]`
+- `[13,14,15]`
+
+The resulting final aggregated linear order is approximately:
+
+- `[0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,4]`
+
+Its Kendall metrics relative to `l2r` are:
+
+- `tau = 0.8167`
+- `distance = 0.0917`
+
+This means that in the `block16` setting, the workflow already recovers a global structure that is very close to `l2r`.
+
+#### block32
+
+Files:
+
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32/stage_02/results.json)
+
+Key observations:
+
+- in `stage_02`, `structured` continues to outperform `random`
+- `mean_adjacent_pairs = 2.799` vs `1.012`
+- `mean_longest_run = 3.044` vs `1.665`
+- `mean_kendall_tau = 0.0530` vs `0.0013`
+- `mean_early_area_plus_tv = -5.483` vs `-5.600`
+
+By the second stage, the model already aggregates longer contiguous segments such as:
+
+- `[0,1,2,3,4,5]`
+- `[6,7,8,9,10]`
+- `[11,12,13,14,15,16]`
+- `[17,18,19,20,21]`
+- `[22,23,24,25,26,27]`
+
+The final aggregated linear order has the following Kendall metrics relative to `l2r`:
+
+- `tau = 0.6371`
+- `distance = 0.1815`
+
+This suggests that in `block32`, the model already develops a fairly strong global order bias, although the stitching between segments is still not fully ideal.
+
+#### block64
+
+Files:
+
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/stage_02/results.json)
+- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/block_aggregation_trace.json)
+
+Key observations:
+
+- `structured` still clearly beats `random`
+- in `stage_02`:
+- `mean_adjacent_pairs = 5.506` vs `0.969`
+- `mean_longest_run = 3.398` vs `1.636`
+- `mean_early_area_plus_tv = -9.084` vs `-9.263`
+
+At the same time:
+
+- `mean_kendall_tau` does not keep improving as strongly as local continuity does
+
+This means that in `block64`, the model still learns many strong local structures, but integrating them into a cleaner global arrangement becomes harder.
+
+The final aggregated order has the following Kendall metrics relative to `l2r`:
+
+- `tau = 0.2857`
+- `distance = 0.3571`
+
+This is exactly the large-block regime where:
+
+- structure is still present
+- but the global candidate pool becomes noisy again
+
+#### Overall interpretation at the current stage
+
+Taken together, these three runs show that:
+
+1. this `segment curriculum` line is not limited to the smallest scale
+2. `block16` already recovers an aggregated order very close to `l2r`
+3. `block32` is currently the most balanced and most suitable main scale
+4. `block64` still shows a clear positive result, but also cleanly exposes the next bottleneck:
+
+- not the absence of signal
+- but the fact that as the number of blocks grows, the candidate pool becomes noisy again and requires stronger pair prefiltering, segment-first proposal construction, and stricter structural filtering
+
+---
