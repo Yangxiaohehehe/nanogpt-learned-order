@@ -17,6 +17,137 @@ def run_command(cmd, cwd):
     subprocess.run(cmd, cwd=str(cwd), check=True)
 
 
+def load_json(path: Path):
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def infer_num_blocks_from_results(payload):
+    max_block = -1
+    for row in payload.get("aggregated_segments", []):
+        for value in row.get("segment", []):
+            max_block = max(max_block, int(value))
+    for row in payload.get("top_pairs", []):
+        max_block = max(max_block, int(row.get("first", -1)), int(row.get("second", -1)))
+    if max_block < 0:
+        return 0
+    return max_block + 1
+
+
+def build_stage_block_layout(payload):
+    num_blocks = infer_num_blocks_from_results(payload)
+    aggregated_segments = payload.get("aggregated_segments", [])
+    segment_entries = []
+    block_lookup = {}
+    used_blocks = set()
+
+    for segment_rank, row in enumerate(aggregated_segments, start=1):
+        segment = [int(v) for v in row.get("segment", [])]
+        if len(segment) < 2:
+            continue
+        entry = {
+            "unit_type": "segment",
+            "segment_rank": int(segment_rank),
+            "segment_length": int(len(segment)),
+            "blocks": segment,
+        }
+        segment_entries.append(entry)
+        for position_in_segment, block_idx in enumerate(segment, start=1):
+            used_blocks.add(block_idx)
+            block_lookup[int(block_idx)] = {
+                "unit_type": "segment",
+                "segment_rank": int(segment_rank),
+                "position_in_segment": int(position_in_segment),
+                "segment_length": int(len(segment)),
+                "segment_blocks": segment,
+            }
+
+    singleton_blocks = [block_idx for block_idx in range(num_blocks) if block_idx not in used_blocks]
+    for singleton_rank, block_idx in enumerate(singleton_blocks, start=1):
+        segment_entries.append(
+            {
+                "unit_type": "singleton",
+                "segment_rank": None,
+                "segment_length": 1,
+                "blocks": [int(block_idx)],
+            }
+        )
+        block_lookup[int(block_idx)] = {
+            "unit_type": "singleton",
+            "segment_rank": None,
+            "position_in_segment": 1,
+            "segment_length": 1,
+            "segment_blocks": [int(block_idx)],
+        }
+
+    linearized_order = []
+    for entry in segment_entries:
+        linearized_order.extend(entry["blocks"])
+
+    return {
+        "num_blocks": int(num_blocks),
+        "units": segment_entries,
+        "linearized_order": linearized_order,
+        "block_lookup": block_lookup,
+    }
+
+
+def build_block_aggregation_trace(benchmark_root: Path, num_stages: int):
+    stage_payloads = []
+    max_num_blocks = 0
+
+    for stage_idx in range(1, int(num_stages) + 1):
+        results_path = benchmark_root / f"stage_{stage_idx:02d}" / "results.json"
+        if not results_path.exists():
+            continue
+        payload = load_json(results_path)
+        layout = build_stage_block_layout(payload)
+        max_num_blocks = max(max_num_blocks, int(layout["num_blocks"]))
+        stage_payloads.append(
+            {
+                "stage": int(stage_idx),
+                "results_path": str(results_path),
+                "aggregated_segments": payload.get("aggregated_segments", []),
+                "linearized_order": layout["linearized_order"],
+                "units": layout["units"],
+                "block_lookup": layout["block_lookup"],
+            }
+        )
+
+    block_paths = []
+    for block_idx in range(max_num_blocks):
+        path = []
+        for stage_payload in stage_payloads:
+            lookup = stage_payload["block_lookup"].get(block_idx)
+            if lookup is None:
+                continue
+            path.append(
+                {
+                    "stage": int(stage_payload["stage"]),
+                    "unit_type": lookup["unit_type"],
+                    "segment_rank": lookup["segment_rank"],
+                    "position_in_segment": int(lookup["position_in_segment"]),
+                    "segment_length": int(lookup["segment_length"]),
+                    "segment_blocks": lookup["segment_blocks"],
+                }
+            )
+        block_paths.append(
+            {
+                "block": int(block_idx),
+                "path": path,
+                "final_stage_position": path[-1] if path else None,
+            }
+        )
+
+    latest_stage = stage_payloads[-1] if stage_payloads else None
+    return {
+        "num_stages_found": int(len(stage_payloads)),
+        "final_stage_linearized_order": latest_stage["linearized_order"] if latest_stage else [],
+        "final_stage_units": latest_stage["units"] if latest_stage else [],
+        "block_paths": block_paths,
+    }
+
+
 def load_runner_config_from_argv(argv):
     config_ns = {}
     filtered = []
@@ -243,6 +374,12 @@ def main():
             cwd=repo_dir,
         )
 
+        trace_payload = build_block_aggregation_trace(benchmark_root, stage_idx)
+        (benchmark_root / "block_aggregation_trace.json").write_text(
+            json.dumps(trace_payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
     final_payload = {
         "config": str(config_path),
         "train_out_dir": train_out_dir,
@@ -258,6 +395,11 @@ def main():
     }
     (benchmark_root / "runner_meta.json").write_text(
         json.dumps(final_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    trace_payload = build_block_aggregation_trace(benchmark_root, args.num_curriculum_stages)
+    (benchmark_root / "block_aggregation_trace.json").write_text(
+        json.dumps(trace_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     print(f"[runner] finished segment curriculum; meta saved to {benchmark_root / 'runner_meta.json'}")

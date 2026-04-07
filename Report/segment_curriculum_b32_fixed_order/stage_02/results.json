@@ -1,0 +1,435 @@
+{
+  "run_meta": {
+    "ckpt_path": "/home/admin/ych/nanogpt-learned-order/out-wikitext103-random-b32-curriculum-fixed-order/ckpt.pt",
+    "dataset": "wikitext103",
+    "split": "val",
+    "batch_size": 64,
+    "num_batches": 200,
+    "pair_mining_batches": 24,
+    "pair_eval_batch_size": 16,
+    "pair_score_k": 2,
+    "candidate_eval_batch_size": 64,
+    "random_pool_size": 64,
+    "structured_pool_size": 64,
+    "top_pair_pool_size": 96,
+    "aggregate_top_k_pairs": 32,
+    "prefix_len": 8,
+    "segment_len": 6,
+    "early_k": 8,
+    "tv_weight": 0.3,
+    "seed": 12345,
+    "device": "cuda",
+    "dtype": "bfloat16",
+    "note": "Local structure is mined from ordered pairs under the frozen checkpoint. Pair scores are computed from the first pair_score_k block reveal steps using area + tv. Top pairs are then greedily aggregated into consistent directed segments. A structured candidate pool is then built from random, segment-guided, chain-biased, pair-biased, and prefix-biased proposals, and compared against a pure-random candidate pool."
+  },
+  "summaries": {
+    "best_structured": {
+      "num_samples": 12800,
+      "mean_prefix_mean_index": 14.113105773925781,
+      "mean_adjacent_pairs": 2.8385937213897705,
+      "mean_longest_run": 3.086796875,
+      "mean_kendall_tau": 0.05505071580410004,
+      "mean_kendall_distance": 0.4724746644496918,
+      "mean_early_area_plus_tv": -5.233037948608398,
+      "mean_full_area_plus_tv": -16.328466415405273
+    },
+    "best_random_pool": {
+      "num_samples": 12800,
+      "mean_prefix_mean_index": 15.436182022094727,
+      "mean_adjacent_pairs": 1.0112500190734863,
+      "mean_longest_run": 1.671328125,
+      "mean_kendall_tau": 0.0010187752777710557,
+      "mean_kendall_distance": 0.4994905889034271,
+      "mean_early_area_plus_tv": -5.375001430511475,
+      "mean_full_area_plus_tv": -16.432371139526367
+    },
+    "l2r_reference": {
+      "num_samples": 12800,
+      "mean_prefix_mean_index": 3.5,
+      "mean_adjacent_pairs": 31.0,
+      "mean_longest_run": 32.0,
+      "mean_kendall_tau": 1.0,
+      "mean_kendall_distance": 0.0,
+      "mean_early_area_plus_tv": -6.909980297088623,
+      "mean_full_area_plus_tv": -16.5002384185791
+    }
+  },
+  "top_pairs": [
+    {
+      "first": 1,
+      "second": 2,
+      "score": -4.889148632685344,
+      "margin_vs_reverse": 0.1057778795560198
+    },
+    {
+      "first": 2,
+      "second": 3,
+      "score": -4.890674829483032,
+      "margin_vs_reverse": 0.11810970306396484
+    },
+    {
+      "first": 13,
+      "second": 14,
+      "score": -4.892271677652995,
+      "margin_vs_reverse": 0.12547727425893118
+    },
+    {
+      "first": 14,
+      "second": 15,
+      "score": -4.900981148084004,
+      "margin_vs_reverse": 0.11276165644327829
+    },
+    {
+      "first": 24,
+      "second": 25,
+      "score": -4.907840549945831,
+      "margin_vs_reverse": 0.12918061017990112
+    },
+    {
+      "first": 19,
+      "second": 20,
+      "score": -4.908186097939809,
+      "margin_vs_reverse": 0.11308582623799701
+    },
+    {
+      "first": 22,
+      "second": 23,
+      "score": -4.913913269837697,
+      "margin_vs_reverse": 0.13957943518956561
+    },
+    {
+      "first": 17,
+      "second": 18,
+      "score": -4.91543044646581,
+      "margin_vs_reverse": 0.14544002215067575
+    },
+    {
+      "first": 12,
+      "second": 13,
+      "score": -4.917219797770183,
+      "margin_vs_reverse": 0.1140318512916565
+    },
+    {
+      "first": 23,
+      "second": 24,
+      "score": -4.922938982645671,
+      "margin_vs_reverse": 0.1108125646909075
+    },
+    {
+      "first": 26,
+      "second": 27,
+      "score": -4.923447211583455,
+      "margin_vs_reverse": 0.11926023165384958
+    },
+    {
+      "first": 15,
+      "second": 16,
+      "score": -4.929555853207906,
+      "margin_vs_reverse": 0.1313644250233974
+    },
+    {
+      "first": 21,
+      "second": 22,
+      "score": -4.93001917997996,
+      "margin_vs_reverse": 0.10411852598190308
+    },
+    {
+      "first": 18,
+      "second": 19,
+      "score": -4.930604954560597,
+      "margin_vs_reverse": 0.09571721156438251
+    },
+    {
+      "first": 0,
+      "second": 1,
+      "score": -4.932929118474324,
+      "margin_vs_reverse": 0.11039610703786273
+    },
+    {
+      "first": 25,
+      "second": 26,
+      "score": -4.936424712340037,
+      "margin_vs_reverse": 0.11752613385518362
+    },
+    {
+      "first": 4,
+      "second": 5,
+      "score": -4.937410116195679,
+      "margin_vs_reverse": 0.10577881336212158
+    },
+    {
+      "first": 27,
+      "second": 28,
+      "score": -4.9381517966588335,
+      "margin_vs_reverse": 0.13097673654556274
+    },
+    {
+      "first": 20,
+      "second": 21,
+      "score": -4.93883357445399,
+      "margin_vs_reverse": 0.11025345325469971
+    },
+    {
+      "first": 3,
+      "second": 4,
+      "score": -4.940183321634929,
+      "margin_vs_reverse": 0.11887288093566895
+    },
+    {
+      "first": 5,
+      "second": 6,
+      "score": -4.945900996526082,
+      "margin_vs_reverse": 0.13956449429194162
+    },
+    {
+      "first": 11,
+      "second": 12,
+      "score": -4.946644087632497,
+      "margin_vs_reverse": 0.09841956694920917
+    },
+    {
+      "first": 7,
+      "second": 8,
+      "score": -4.9473869403203325,
+      "margin_vs_reverse": 0.10888791084289551
+    },
+    {
+      "first": 8,
+      "second": 9,
+      "score": -4.953099071979523,
+      "margin_vs_reverse": 0.12643468379974365
+    },
+    {
+      "first": 9,
+      "second": 10,
+      "score": -4.956417898337047,
+      "margin_vs_reverse": 0.10546271006266217
+    },
+    {
+      "first": 30,
+      "second": 31,
+      "score": -4.956505636374156,
+      "margin_vs_reverse": 0.12503506739934256
+    },
+    {
+      "first": 29,
+      "second": 30,
+      "score": -4.959079345067342,
+      "margin_vs_reverse": 0.123955925305685
+    },
+    {
+      "first": 10,
+      "second": 11,
+      "score": -4.9603045384089155,
+      "margin_vs_reverse": 0.10681303342183401
+    },
+    {
+      "first": 16,
+      "second": 17,
+      "score": -4.960963388284047,
+      "margin_vs_reverse": 0.09837985038757324
+    },
+    {
+      "first": 28,
+      "second": 29,
+      "score": -4.9615578055381775,
+      "margin_vs_reverse": 0.1070173184076948
+    },
+    {
+      "first": 6,
+      "second": 7,
+      "score": -4.987242201964061,
+      "margin_vs_reverse": 0.11062328020731549
+    },
+    {
+      "first": 2,
+      "second": 1,
+      "score": -4.9949265122413635,
+      "margin_vs_reverse": -0.1057778795560198
+    },
+    {
+      "first": 3,
+      "second": 2,
+      "score": -5.008784532546997,
+      "margin_vs_reverse": -0.11810970306396484
+    },
+    {
+      "first": 15,
+      "second": 14,
+      "score": -5.013742804527283,
+      "margin_vs_reverse": -0.11276165644327829
+    },
+    {
+      "first": 14,
+      "second": 13,
+      "score": -5.017748951911926,
+      "margin_vs_reverse": -0.12547727425893118
+    },
+    {
+      "first": 20,
+      "second": 19,
+      "score": -5.021271924177806,
+      "margin_vs_reverse": -0.11308582623799701
+    },
+    {
+      "first": 19,
+      "second": 18,
+      "score": -5.02632216612498,
+      "margin_vs_reverse": -0.09571721156438251
+    },
+    {
+      "first": 13,
+      "second": 12,
+      "score": -5.031251649061839,
+      "margin_vs_reverse": -0.1140318512916565
+    },
+    {
+      "first": 24,
+      "second": 23,
+      "score": -5.033751547336578,
+      "margin_vs_reverse": -0.1108125646909075
+    },
+    {
+      "first": 22,
+      "second": 21,
+      "score": -5.0341377059618635,
+      "margin_vs_reverse": -0.10411852598190308
+    },
+    {
+      "first": 25,
+      "second": 24,
+      "score": -5.037021160125732,
+      "margin_vs_reverse": -0.12918061017990112
+    },
+    {
+      "first": 27,
+      "second": 26,
+      "score": -5.042707443237305,
+      "margin_vs_reverse": -0.11926023165384958
+    },
+    {
+      "first": 5,
+      "second": 4,
+      "score": -5.0431889295578,
+      "margin_vs_reverse": -0.10577881336212158
+    },
+    {
+      "first": 1,
+      "second": 0,
+      "score": -5.043325225512187,
+      "margin_vs_reverse": -0.11039610703786273
+    },
+    {
+      "first": 12,
+      "second": 11,
+      "score": -5.045063654581706,
+      "margin_vs_reverse": -0.09841956694920917
+    },
+    {
+      "first": 21,
+      "second": 20,
+      "score": -5.04908702770869,
+      "margin_vs_reverse": -0.11025345325469971
+    },
+    {
+      "first": 23,
+      "second": 22,
+      "score": -5.053492705027263,
+      "margin_vs_reverse": -0.13957943518956561
+    },
+    {
+      "first": 26,
+      "second": 25,
+      "score": -5.053950846195221,
+      "margin_vs_reverse": -0.11752613385518362
+    },
+    {
+      "first": 8,
+      "second": 7,
+      "score": -5.056274851163228,
+      "margin_vs_reverse": -0.10888791084289551
+    },
+    {
+      "first": 4,
+      "second": 3,
+      "score": -5.059056202570598,
+      "margin_vs_reverse": -0.11887288093566895
+    }
+  ],
+  "aggregated_segments": [
+    {
+      "segment": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "length": 6,
+      "first": 0,
+      "last": 5
+    },
+    {
+      "segment": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "length": 6,
+      "first": 11,
+      "last": 16
+    },
+    {
+      "segment": [
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "length": 6,
+      "first": 26,
+      "last": 31
+    },
+    {
+      "segment": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "length": 5,
+      "first": 6,
+      "last": 10
+    },
+    {
+      "segment": [
+        21,
+        22,
+        23,
+        24,
+        25
+      ],
+      "length": 5,
+      "first": 21,
+      "last": 25
+    },
+    {
+      "segment": [
+        17,
+        18,
+        19,
+        20
+      ],
+      "length": 4,
+      "first": 17,
+      "last": 20
+    }
+  ]
+}

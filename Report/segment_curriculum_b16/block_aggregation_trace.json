@@ -1,0 +1,560 @@
+{
+  "num_stages_found": 1,
+  "final_stage_linearized_order": [
+    0,
+    1,
+    2,
+    3,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    4
+  ],
+  "final_stage_units": [
+    {
+      "unit_type": "segment",
+      "segment_rank": 1,
+      "segment_length": 4,
+      "blocks": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "unit_type": "segment",
+      "segment_rank": 2,
+      "segment_length": 4,
+      "blocks": [
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "unit_type": "segment",
+      "segment_rank": 3,
+      "segment_length": 4,
+      "blocks": [
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "unit_type": "segment",
+      "segment_rank": 4,
+      "segment_length": 3,
+      "blocks": [
+        13,
+        14,
+        15
+      ]
+    },
+    {
+      "unit_type": "singleton",
+      "segment_rank": null,
+      "segment_length": 1,
+      "blocks": [
+        4
+      ]
+    }
+  ],
+  "block_paths": [
+    {
+      "block": 0,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 1,
+          "segment_length": 4,
+          "segment_blocks": [
+            0,
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 1,
+        "position_in_segment": 1,
+        "segment_length": 4,
+        "segment_blocks": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "block": 1,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 2,
+          "segment_length": 4,
+          "segment_blocks": [
+            0,
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 1,
+        "position_in_segment": 2,
+        "segment_length": 4,
+        "segment_blocks": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "block": 2,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 3,
+          "segment_length": 4,
+          "segment_blocks": [
+            0,
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 1,
+        "position_in_segment": 3,
+        "segment_length": 4,
+        "segment_blocks": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "block": 3,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 4,
+          "segment_length": 4,
+          "segment_blocks": [
+            0,
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 1,
+        "position_in_segment": 4,
+        "segment_length": 4,
+        "segment_blocks": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "block": 4,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            4
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "singleton",
+        "segment_rank": null,
+        "position_in_segment": 1,
+        "segment_length": 1,
+        "segment_blocks": [
+          4
+        ]
+      }
+    },
+    {
+      "block": 5,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 1,
+          "segment_length": 4,
+          "segment_blocks": [
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 2,
+        "position_in_segment": 1,
+        "segment_length": 4,
+        "segment_blocks": [
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    },
+    {
+      "block": 6,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 2,
+          "segment_length": 4,
+          "segment_blocks": [
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 2,
+        "position_in_segment": 2,
+        "segment_length": 4,
+        "segment_blocks": [
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    },
+    {
+      "block": 7,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 3,
+          "segment_length": 4,
+          "segment_blocks": [
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 2,
+        "position_in_segment": 3,
+        "segment_length": 4,
+        "segment_blocks": [
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    },
+    {
+      "block": 8,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 4,
+          "segment_length": 4,
+          "segment_blocks": [
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 2,
+        "position_in_segment": 4,
+        "segment_length": 4,
+        "segment_blocks": [
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    },
+    {
+      "block": 9,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 3,
+          "position_in_segment": 1,
+          "segment_length": 4,
+          "segment_blocks": [
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 3,
+        "position_in_segment": 1,
+        "segment_length": 4,
+        "segment_blocks": [
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "block": 10,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 3,
+          "position_in_segment": 2,
+          "segment_length": 4,
+          "segment_blocks": [
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 3,
+        "position_in_segment": 2,
+        "segment_length": 4,
+        "segment_blocks": [
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "block": 11,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 3,
+          "position_in_segment": 3,
+          "segment_length": 4,
+          "segment_blocks": [
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 3,
+        "position_in_segment": 3,
+        "segment_length": 4,
+        "segment_blocks": [
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "block": 12,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 3,
+          "position_in_segment": 4,
+          "segment_length": 4,
+          "segment_blocks": [
+            9,
+            10,
+            11,
+            12
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 3,
+        "position_in_segment": 4,
+        "segment_length": 4,
+        "segment_blocks": [
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    },
+    {
+      "block": 13,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 1,
+          "segment_length": 3,
+          "segment_blocks": [
+            13,
+            14,
+            15
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 4,
+        "position_in_segment": 1,
+        "segment_length": 3,
+        "segment_blocks": [
+          13,
+          14,
+          15
+        ]
+      }
+    },
+    {
+      "block": 14,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 2,
+          "segment_length": 3,
+          "segment_blocks": [
+            13,
+            14,
+            15
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 4,
+        "position_in_segment": 2,
+        "segment_length": 3,
+        "segment_blocks": [
+          13,
+          14,
+          15
+        ]
+      }
+    },
+    {
+      "block": 15,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 3,
+          "segment_length": 3,
+          "segment_blocks": [
+            13,
+            14,
+            15
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 1,
+        "unit_type": "segment",
+        "segment_rank": 4,
+        "position_in_segment": 3,
+        "segment_length": 3,
+        "segment_blocks": [
+          13,
+          14,
+          15
+        ]
+      }
+    }
+  ]
+}

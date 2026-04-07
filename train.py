@@ -881,6 +881,14 @@ def estimate_loss():
                     logits, loss = model(X, mode=main_eval_mode)
                 losses[k] = loss.item()
             out[split] = losses.mean().item()
+            if split == 'val':
+                l2r_losses = torch.zeros(eval_iters)
+                for k in range(eval_iters):
+                    X, Y = get_batch(split)
+                    with ctx:
+                        _, l2r_loss = model(X, mode='AR')
+                    l2r_losses[k] = l2r_loss.item()
+                out["val_l2r_loss"] = l2r_losses.mean().item()
     model.train()
     return out
 
@@ -1044,6 +1052,8 @@ while True:
                 "lr": lr,
                 "mfu": running_mfu*100,
             }
+            if "val_l2r_loss" in losses:
+                log_payload["val/l2r_loss"] = losses["val_l2r_loss"]
             if train_stage == 'order_head':
                 log_payload.update({
                     "train/order_entropy": losses["train_order_entropy"],
@@ -1084,14 +1094,19 @@ while True:
                     log_payload["train/total_loss"] = losses["train_total_loss"]
                     log_payload["val/total_loss"] = losses["val_total_loss"]
             if latest_policy_train_stats is not None:
-                log_payload.update({
-                    "policy/order_entropy": latest_policy_train_stats["order_entropy"],
-                    "policy/kendall_tau_l2r": latest_policy_train_stats["kendall_tau"],
-                    "policy/prefix_mean_index": latest_policy_train_stats["prefix_mean_index"],
-                    "policy/prefix_std_index": latest_policy_train_stats["prefix_std_index"],
-                    "policy/prefix_min_index": latest_policy_train_stats["prefix_min_index"],
-                    "policy/prefix_max_index": latest_policy_train_stats["prefix_max_index"],
-                })
+                optional_policy_fields = {
+                    "policy/order_entropy": "order_entropy",
+                    "policy/kendall_tau_l2r": "kendall_tau",
+                    "policy/prefix_mean_index": "prefix_mean_index",
+                    "policy/prefix_std_index": "prefix_std_index",
+                    "policy/prefix_min_index": "prefix_min_index",
+                    "policy/prefix_max_index": "prefix_max_index",
+                    "policy/segment_guided_ratio": "segment_guided_ratio",
+                    "policy/segment_library_size": "segment_library_size",
+                }
+                for wandb_key, stats_key in optional_policy_fields.items():
+                    if stats_key in latest_policy_train_stats:
+                        log_payload[wandb_key] = latest_policy_train_stats[stats_key]
                 if "prefix_auc" in latest_policy_train_stats:
                     log_payload["policy/prefix_auc"] = latest_policy_train_stats["prefix_auc"]
                 if "preference_loss" in latest_policy_train_stats:

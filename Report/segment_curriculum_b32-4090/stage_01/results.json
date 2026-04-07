@@ -1,0 +1,454 @@
+{
+  "run_meta": {
+    "ckpt_path": "/home/admin/ych/nanogpt-learned-order/out-wikitext103-random-b32-curriculum/ckpt.pt",
+    "dataset": "wikitext103",
+    "split": "val",
+    "batch_size": 64,
+    "num_batches": 200,
+    "pair_mining_batches": 24,
+    "pair_eval_batch_size": 16,
+    "pair_score_k": 2,
+    "candidate_eval_batch_size": 64,
+    "random_pool_size": 64,
+    "structured_pool_size": 64,
+    "top_pair_pool_size": 128,
+    "aggregate_top_k_pairs": 64,
+    "prefix_len": 8,
+    "segment_len": 4,
+    "early_k": 8,
+    "tv_weight": 0.3,
+    "seed": 12345,
+    "device": "cuda",
+    "dtype": "bfloat16",
+    "note": "Local structure is mined from ordered pairs under the frozen checkpoint. Pair scores are computed from the first pair_score_k block reveal steps using area + tv. Top pairs are then greedily aggregated into consistent directed segments. A structured candidate pool is then built from random, segment-guided, chain-biased, pair-biased, and prefix-biased proposals, and compared against a pure-random candidate pool."
+  },
+  "summaries": {
+    "best_structured": {
+      "num_samples": 12800,
+      "mean_prefix_mean_index": 14.097099304199219,
+      "mean_adjacent_pairs": 3.0916407108306885,
+      "mean_longest_run": 2.666953125,
+      "mean_kendall_tau": 0.05577463284134865,
+      "mean_kendall_distance": 0.4721126854419708,
+      "mean_early_area_plus_tv": -5.359306812286377,
+      "mean_full_area_plus_tv": -16.455965042114258
+    },
+    "best_random_pool": {
+      "num_samples": 12800,
+      "mean_prefix_mean_index": 15.53165054321289,
+      "mean_adjacent_pairs": 0.9826562404632568,
+      "mean_longest_run": 1.661328125,
+      "mean_kendall_tau": -0.0007015499286353588,
+      "mean_kendall_distance": 0.5003507733345032,
+      "mean_early_area_plus_tv": -5.475401401519775,
+      "mean_full_area_plus_tv": -16.555461883544922
+    },
+    "l2r_reference": {
+      "num_samples": 12800,
+      "mean_prefix_mean_index": 3.5,
+      "mean_adjacent_pairs": 31.0,
+      "mean_longest_run": 32.0,
+      "mean_kendall_tau": 1.0,
+      "mean_kendall_distance": 0.0,
+      "mean_early_area_plus_tv": -7.03060245513916,
+      "mean_full_area_plus_tv": -16.493030548095703
+    }
+  },
+  "top_pairs": [
+    {
+      "first": 13,
+      "second": 14,
+      "score": -4.9815683762232466,
+      "margin_vs_reverse": 0.15821919838587384
+    },
+    {
+      "first": 2,
+      "second": 3,
+      "score": -4.988467037677765,
+      "margin_vs_reverse": 0.14000529050827026
+    },
+    {
+      "first": 24,
+      "second": 25,
+      "score": -4.98894590139389,
+      "margin_vs_reverse": 0.15957905848820975
+    },
+    {
+      "first": 1,
+      "second": 2,
+      "score": -4.98981777826945,
+      "margin_vs_reverse": 0.14145986239115338
+    },
+    {
+      "first": 14,
+      "second": 15,
+      "score": -4.990077356497447,
+      "margin_vs_reverse": 0.13883890708287527
+    },
+    {
+      "first": 19,
+      "second": 20,
+      "score": -4.996367434660594,
+      "margin_vs_reverse": 0.14710503816604614
+    },
+    {
+      "first": 23,
+      "second": 24,
+      "score": -5.001025815804799,
+      "margin_vs_reverse": 0.14386433362960815
+    },
+    {
+      "first": 12,
+      "second": 13,
+      "score": -5.005946715672811,
+      "margin_vs_reverse": 0.14850242932637592
+    },
+    {
+      "first": 22,
+      "second": 23,
+      "score": -5.006080150604248,
+      "margin_vs_reverse": 0.16304713487625122
+    },
+    {
+      "first": 17,
+      "second": 18,
+      "score": -5.006176173686981,
+      "margin_vs_reverse": 0.1654016375541687
+    },
+    {
+      "first": 21,
+      "second": 22,
+      "score": -5.016612112522125,
+      "margin_vs_reverse": 0.13359769185384085
+    },
+    {
+      "first": 15,
+      "second": 16,
+      "score": -5.02176417907079,
+      "margin_vs_reverse": 0.15687753756841083
+    },
+    {
+      "first": 0,
+      "second": 1,
+      "score": -5.021846950054169,
+      "margin_vs_reverse": 0.14434540271759033
+    },
+    {
+      "first": 18,
+      "second": 19,
+      "score": -5.02335923910141,
+      "margin_vs_reverse": 0.12272006273269653
+    },
+    {
+      "first": 25,
+      "second": 26,
+      "score": -5.024392982323964,
+      "margin_vs_reverse": 0.15646000703175922
+    },
+    {
+      "first": 4,
+      "second": 5,
+      "score": -5.024903655052185,
+      "margin_vs_reverse": 0.13168734312057495
+    },
+    {
+      "first": 26,
+      "second": 27,
+      "score": -5.025277495384216,
+      "margin_vs_reverse": 0.1416076421737671
+    },
+    {
+      "first": 20,
+      "second": 21,
+      "score": -5.026666522026062,
+      "margin_vs_reverse": 0.1357421080271406
+    },
+    {
+      "first": 27,
+      "second": 28,
+      "score": -5.033179799715678,
+      "margin_vs_reverse": 0.16717056433359723
+    },
+    {
+      "first": 10,
+      "second": 11,
+      "score": -5.036832054456075,
+      "margin_vs_reverse": 0.15046385924021433
+    },
+    {
+      "first": 11,
+      "second": 12,
+      "score": -5.03686906894048,
+      "margin_vs_reverse": 0.1282398502031965
+    },
+    {
+      "first": 16,
+      "second": 17,
+      "score": -5.03742919365565,
+      "margin_vs_reverse": 0.1409511168797808
+    },
+    {
+      "first": 5,
+      "second": 6,
+      "score": -5.040907979011536,
+      "margin_vs_reverse": 0.1623148520787554
+    },
+    {
+      "first": 8,
+      "second": 9,
+      "score": -5.047845880190532,
+      "margin_vs_reverse": 0.14247788985570242
+    },
+    {
+      "first": 3,
+      "second": 4,
+      "score": -5.050216933091481,
+      "margin_vs_reverse": 0.1364966630935669
+    },
+    {
+      "first": 29,
+      "second": 30,
+      "score": -5.057377318541209,
+      "margin_vs_reverse": 0.1622200608253479
+    },
+    {
+      "first": 7,
+      "second": 8,
+      "score": -5.057852745056152,
+      "margin_vs_reverse": 0.12768018245697021
+    },
+    {
+      "first": 9,
+      "second": 10,
+      "score": -5.05838817358017,
+      "margin_vs_reverse": 0.1267194151878357
+    },
+    {
+      "first": 28,
+      "second": 29,
+      "score": -5.06523734331131,
+      "margin_vs_reverse": 0.13835320870081613
+    },
+    {
+      "first": 30,
+      "second": 31,
+      "score": -5.069720983505249,
+      "margin_vs_reverse": 0.1362284024556475
+    },
+    {
+      "first": 6,
+      "second": 7,
+      "score": -5.088229080041249,
+      "margin_vs_reverse": 0.13853140672047992
+    },
+    {
+      "first": 3,
+      "second": 2,
+      "score": -5.128472328186035,
+      "margin_vs_reverse": -0.14000529050827026
+    },
+    {
+      "first": 15,
+      "second": 14,
+      "score": -5.128916263580322,
+      "margin_vs_reverse": -0.13883890708287527
+    },
+    {
+      "first": 2,
+      "second": 1,
+      "score": -5.1312776406606035,
+      "margin_vs_reverse": -0.14145986239115338
+    },
+    {
+      "first": 14,
+      "second": 13,
+      "score": -5.13978757460912,
+      "margin_vs_reverse": -0.15821919838587384
+    },
+    {
+      "first": 20,
+      "second": 19,
+      "score": -5.14347247282664,
+      "margin_vs_reverse": -0.14710503816604614
+    },
+    {
+      "first": 24,
+      "second": 23,
+      "score": -5.144890149434407,
+      "margin_vs_reverse": -0.14386433362960815
+    },
+    {
+      "first": 19,
+      "second": 18,
+      "score": -5.1460793018341064,
+      "margin_vs_reverse": -0.12272006273269653
+    },
+    {
+      "first": 25,
+      "second": 24,
+      "score": -5.1485249598821,
+      "margin_vs_reverse": -0.15957905848820975
+    },
+    {
+      "first": 22,
+      "second": 21,
+      "score": -5.150209804375966,
+      "margin_vs_reverse": -0.13359769185384085
+    },
+    {
+      "first": 13,
+      "second": 12,
+      "score": -5.1544491449991865,
+      "margin_vs_reverse": -0.14850242932637592
+    },
+    {
+      "first": 5,
+      "second": 4,
+      "score": -5.15659099817276,
+      "margin_vs_reverse": -0.13168734312057495
+    },
+    {
+      "first": 21,
+      "second": 20,
+      "score": -5.162408630053203,
+      "margin_vs_reverse": -0.1357421080271406
+    },
+    {
+      "first": 12,
+      "second": 11,
+      "score": -5.165108919143677,
+      "margin_vs_reverse": -0.1282398502031965
+    },
+    {
+      "first": 1,
+      "second": 0,
+      "score": -5.166192352771759,
+      "margin_vs_reverse": -0.14434540271759033
+    },
+    {
+      "first": 27,
+      "second": 26,
+      "score": -5.166885137557983,
+      "margin_vs_reverse": -0.1416076421737671
+    },
+    {
+      "first": 23,
+      "second": 22,
+      "score": -5.169127285480499,
+      "margin_vs_reverse": -0.16304713487625122
+    },
+    {
+      "first": 17,
+      "second": 19,
+      "score": -5.171385248502095,
+      "margin_vs_reverse": 0.013495326042175293
+    },
+    {
+      "first": 18,
+      "second": 17,
+      "score": -5.17157781124115,
+      "margin_vs_reverse": -0.1654016375541687
+    },
+    {
+      "first": 15,
+      "second": 19,
+      "score": -5.175707697868347,
+      "margin_vs_reverse": 0.011371215184529326
+    }
+  ],
+  "aggregated_segments": [
+    {
+      "segment": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "length": 4,
+      "first": 0,
+      "last": 3
+    },
+    {
+      "segment": [
+        12,
+        13,
+        14,
+        15
+      ],
+      "length": 4,
+      "first": 12,
+      "last": 15
+    },
+    {
+      "segment": [
+        17,
+        18,
+        19,
+        20
+      ],
+      "length": 4,
+      "first": 17,
+      "last": 20
+    },
+    {
+      "segment": [
+        22,
+        23,
+        24,
+        25
+      ],
+      "length": 4,
+      "first": 22,
+      "last": 25
+    },
+    {
+      "segment": [
+        4,
+        5,
+        6
+      ],
+      "length": 3,
+      "first": 4,
+      "last": 6
+    },
+    {
+      "segment": [
+        7,
+        8,
+        9
+      ],
+      "length": 3,
+      "first": 7,
+      "last": 9
+    },
+    {
+      "segment": [
+        26,
+        27,
+        28
+      ],
+      "length": 3,
+      "first": 26,
+      "last": 28
+    },
+    {
+      "segment": [
+        29,
+        30,
+        31
+      ],
+      "length": 3,
+      "first": 29,
+      "last": 31
+    },
+    {
+      "segment": [
+        10,
+        11
+      ],
+      "length": 2,
+      "first": 10,
+      "last": 11
+    }
+  ]
+}
