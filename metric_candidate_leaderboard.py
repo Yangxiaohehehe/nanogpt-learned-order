@@ -7,7 +7,13 @@ import numpy as np
 import torch
 
 from AOGPT import AOGPT, AOGPTConfig
-from order_utils import build_ascending_block_orders, evaluate_block_order_quality
+from order_utils import (
+    block_permutation_to_token_permutation,
+    build_ascending_block_orders,
+    build_fixed_block_permutation,
+    evaluate_block_order_quality,
+    invert_permutation,
+)
 
 
 def parse_args():
@@ -66,6 +72,25 @@ def load_checkpoint(ckpt_path: Path, device: str):
     return torch.load(ckpt_path, map_location=device)
 
 
+def load_block_permutation_from_checkpoint(checkpoint, num_blocks, block_len):
+    config = checkpoint.get("config", {})
+    if not bool(config.get("permute_data", False)):
+        return None
+    perm_state = checkpoint.get("data_permutation")
+    if perm_state is not None and perm_state.get("block_perm") is not None:
+        block_perm = torch.tensor(perm_state["block_perm"], dtype=torch.long)
+    else:
+        block_perm = build_fixed_block_permutation(num_blocks, int(config.get("permute_seed", 42)))
+    inverse_block_perm = invert_permutation(block_perm)
+    token_perm = block_permutation_to_token_permutation(block_perm, block_len=block_len)
+    return {
+        "permute_mode": "block",
+        "block_perm": block_perm,
+        "inverse_block_perm": inverse_block_perm,
+        "token_perm": token_perm,
+    }
+
+
 def build_model(checkpoint, device: str):
     model = AOGPT(AOGPTConfig(**checkpoint["model_args"]))
     state_dict = checkpoint["model"]
@@ -95,7 +120,7 @@ def load_tokens(data_dir: Path, split: str):
     return np.memmap(split_path, dtype=np.uint16, mode="r")
 
 
-def sample_batch(tokens, batch_size: int, block_size: int, rng, device: str):
+def sample_batch(tokens, batch_size: int, block_size: int, rng, device: str, token_perm=None):
     max_start = len(tokens) - block_size
     if max_start <= 0:
         raise ValueError("Dataset split is shorter than block_size.")
@@ -103,7 +128,10 @@ def sample_batch(tokens, batch_size: int, block_size: int, rng, device: str):
     batch = torch.stack(
         [torch.from_numpy(tokens[start : start + block_size].astype(np.int64)) for start in starts]
     )
-    return batch.to(device)
+    batch = batch.to(device)
+    if token_perm is not None:
+        batch = batch[:, token_perm.to(device)]
+    return batch
 
 
 def summarize_window(window_losses, final_loss, prefix, tv_weight, late_drop_weight):
@@ -158,21 +186,45 @@ def main():
 
     num_blocks = model.num_blocks
     early_k = max(2, num_blocks // 4)
+    permutation_state = load_block_permutation_from_checkpoint(
+        checkpoint,
+        num_blocks=num_blocks,
+        block_len=model.block_order_block_len,
+    )
+    token_perm = None if permutation_state is None else permutation_state["token_perm"]
+    block_perm = None if permutation_state is None else permutation_state["block_perm"].to(args.device)
+    inverse_block_perm = None if permutation_state is None else permutation_state["inverse_block_perm"].to(args.device)
 
     random_candidates = torch.stack(
         [torch.randperm(num_blocks, generator=order_generator, device=args.device) for _ in range(int(args.num_candidates))],
         dim=0,
     )
-    l2r_candidate = build_ascending_block_orders(1, num_blocks, args.device)
-    candidate_orders = torch.cat([random_candidates, l2r_candidate], dim=0)
-    candidate_labels = [f"rand_{i:02d}" for i in range(int(args.num_candidates))] + ["l2r"]
-    l2r_idx = candidate_orders.size(0) - 1
+    current_l2r_candidate = build_ascending_block_orders(1, num_blocks, args.device)
+    candidate_orders = [random_candidates, current_l2r_candidate]
+    candidate_labels = [f"rand_{i:02d}" for i in range(int(args.num_candidates))] + ["current_l2r"]
+    current_l2r_idx = int(args.num_candidates)
+
+    original_l2r_idx = None
+    if inverse_block_perm is not None:
+        original_l2r_in_current_frame = inverse_block_perm.view(1, -1)
+        candidate_orders.append(original_l2r_in_current_frame)
+        candidate_labels.append("original_l2r_in_current_frame")
+        original_l2r_idx = current_l2r_idx + 1
+
+    candidate_orders = torch.cat(candidate_orders, dim=0)
 
     metric_sums = None
     total_eval_count = 0
 
     for _ in range(int(args.num_batches)):
-        idx = sample_batch(tokens, args.batch_size, model.config.block_size, rng, args.device)
+        idx = sample_batch(
+            tokens,
+            args.batch_size,
+            model.config.block_size,
+            rng,
+            args.device,
+            token_perm=token_perm,
+        )
         tiled_orders = candidate_orders.unsqueeze(0).expand(idx.size(0), -1, -1)
         flat_orders = tiled_orders.reshape(idx.size(0) * candidate_orders.size(0), num_blocks)
         flat_idx = idx.unsqueeze(1).expand(idx.size(0), candidate_orders.size(0), idx.size(1)).reshape(
@@ -222,22 +274,33 @@ def main():
     for source_metric in metric_names:
         source_values = np.asarray(metric_means[source_metric], dtype=np.float64)
         sorted_idx = np.argsort(-source_values)
-        l2r_rank = int(np.where(sorted_idx == l2r_idx)[0][0]) + 1
-        cutoff = max(int(args.top_k), l2r_rank)
+        current_l2r_rank = int(np.where(sorted_idx == current_l2r_idx)[0][0]) + 1
+        cutoff = max(int(args.top_k), current_l2r_rank)
+        if original_l2r_idx is not None:
+            original_l2r_rank = int(np.where(sorted_idx == original_l2r_idx)[0][0]) + 1
+            cutoff = max(cutoff, original_l2r_rank)
+        else:
+            original_l2r_rank = None
         rows = []
         for rank_pos, candidate_idx in enumerate(sorted_idx[:cutoff], start=1):
+            order_prefix = candidate_orders[candidate_idx, :8].detach().cpu().tolist()
             row = {
                 "rank": int(rank_pos),
                 "candidate_idx": int(candidate_idx),
                 "candidate_label": candidate_labels[candidate_idx],
-                "is_l2r": bool(candidate_idx == l2r_idx),
-                "order_prefix": [int(v) for v in candidate_orders[candidate_idx, :8].detach().cpu().tolist()],
+                "is_current_l2r": bool(candidate_idx == current_l2r_idx),
+                "is_original_l2r_in_current_frame": bool(original_l2r_idx is not None and candidate_idx == original_l2r_idx),
+                "order_prefix": [int(v) for v in order_prefix],
             }
+            if block_perm is not None:
+                order_prefix_original = block_perm[candidate_orders[candidate_idx, :8].long()].detach().cpu().tolist()
+                row["order_prefix_original"] = [int(v) for v in order_prefix_original]
             for metric_name in metric_names:
                 row[metric_name] = float(metric_means[metric_name][candidate_idx])
             rows.append(row)
         leaderboards[source_metric] = {
-            "l2r_rank": l2r_rank,
+            "current_l2r_rank": current_l2r_rank,
+            "original_l2r_in_current_frame_rank": original_l2r_rank,
             "cutoff_used": cutoff,
             "rows": rows,
         }
@@ -249,7 +312,8 @@ def main():
         "batch_size": args.batch_size,
         "num_batches": args.num_batches,
         "num_candidates": args.num_candidates,
-        "includes_l2r_candidate": True,
+        "includes_current_l2r_candidate": True,
+        "includes_original_l2r_in_current_frame": bool(original_l2r_idx is not None),
         "top_k": args.top_k,
         "num_blocks": num_blocks,
         "early_k": early_k,
@@ -258,20 +322,33 @@ def main():
         "seed": args.seed,
         "device": args.device,
         "dtype": args.dtype,
+        "permute_data": bool(checkpoint.get("config", {}).get("permute_data", False)),
+        "permute_mode": checkpoint.get("config", {}).get("permute_mode", ""),
+        "permute_seed": checkpoint.get("config", {}).get("permute_seed", None),
         "note": (
-            "Each leaderboard ranks a fixed candidate pool of random orders plus l2r by the mean metric value "
-            "over all evaluated batches. Metrics are provided in both early_* form (first 25% of block reveal steps) "
-            "and full_* form (the full block order trajectory). If l2r is outside top_k, rows are extended until "
-            "l2r appears."
+            "Each leaderboard ranks a fixed candidate pool of random orders plus explicit l2r baselines by the mean "
+            "metric value over all evaluated batches. Metrics are provided in both early_* form (first 25% of block "
+            "reveal steps) and full_* form (the full block order trajectory). For permuted-data checkpoints, batches "
+            "are permuted using the checkpoint's saved token permutation before evaluation, and the candidate pool also "
+            "includes original_l2r_in_current_frame."
         ),
     }
+    if permutation_state is not None:
+        run_meta["permute_map"] = {
+            "block_perm": [int(v) for v in permutation_state["block_perm"].tolist()],
+            "inverse_block_perm": [int(v) for v in permutation_state["inverse_block_perm"].tolist()],
+        }
 
     save_json(args.out_dir / "run_meta.json", run_meta)
     save_json(args.out_dir / "leaderboards.json", leaderboards)
 
     print(f"saved candidate leaderboards to {args.out_dir}")
     for metric_name, payload in leaderboards.items():
-        print(f"{metric_name}: l2r_rank={payload['l2r_rank']}, cutoff={payload['cutoff_used']}")
+        print(
+            f"{metric_name}: current_l2r_rank={payload['current_l2r_rank']}, "
+            f"original_l2r_in_current_frame_rank={payload['original_l2r_in_current_frame_rank']}, "
+            f"cutoff={payload['cutoff_used']}"
+        )
 
 
 if __name__ == "__main__":

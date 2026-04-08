@@ -285,6 +285,7 @@ def mine_pair_scores(
     autocast_context,
     seed,
     pair_eval_batch_size,
+    token_perm=None,
 ):
     num_blocks = model.num_blocks
     pair_list = [(i, j) for i in range(num_blocks) for j in range(num_blocks) if i != j]
@@ -298,7 +299,7 @@ def mine_pair_scores(
     chunk_size = max(1, int(pair_eval_batch_size))
     eval_chunk_size = max(1, int(pair_eval_batch_size))
     for _ in range(int(num_batches)):
-        idx = sample_batch(tokens, batch_size, model.config.block_size, rng, device)
+        idx = sample_batch(tokens, batch_size, model.config.block_size, rng, device, token_perm=token_perm)
         for start in range(0, len(pair_list), chunk_size):
             chunk_pairs = pair_list[start : start + chunk_size]
             pair_orders = build_random_suffix_orders(
@@ -618,6 +619,7 @@ def main():
         autocast_context=autocast_context,
         seed=int(args.seed),
         pair_eval_batch_size=int(args.pair_eval_batch_size),
+        token_perm=token_perm,
     )
     aggregated_segments = aggregate_top_pairs_to_segments(
         top_pairs,
@@ -774,8 +776,11 @@ def main():
         summaries.update(summaries_original)
 
     top_pair_rows = top_pairs[: min(50, len(top_pairs))]
-    top_pair_rows_original = map_pair_rows_to_original(top_pair_rows, block_perm) if block_perm is not None else []
-    aggregated_segments_original = map_segments_to_original(aggregated_segments, block_perm) if block_perm is not None else []
+    if block_perm is not None:
+        top_pair_rows = map_pair_rows_to_original(top_pair_rows, block_perm)
+        aggregated_segments = map_segments_to_original(aggregated_segments, block_perm)
+    top_pair_rows_original = top_pair_rows if block_perm is not None else []
+    aggregated_segments_original = aggregated_segments if block_perm is not None else []
     run_meta = {
         "ckpt_path": str(args.ckpt_path),
         "dataset": args.dataset or checkpoint.get("config", {}).get("dataset"),

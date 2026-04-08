@@ -449,7 +449,11 @@ def build_target_probe_context_orders(
             candidate_slots.append(int(candidate_slot))
 
             used_base = set(prefix)
-            rest = [idx for idx in template[prefix_context_slots:] if idx not in used_base]
+            # Build the suffix from the full shared template, not only the tail slice.
+            # Otherwise, when a candidate is injected into the prefix by replacing an
+            # existing context block, the displaced block can be dropped entirely,
+            # producing inconsistent order lengths (e.g. 31 instead of 32 for block32).
+            rest = [idx for idx in template if idx not in used_base]
             base_orders.append(torch.tensor(prefix + rest, device=device, dtype=torch.long))
 
             ctrl_fill = next(
