@@ -20,6 +20,26 @@ def build_ascending_block_orders(batch_size, num_blocks, device):
     return torch.arange(num_blocks, device=device).unsqueeze(0).expand(batch_size, -1)
 
 
+def build_fixed_block_permutation(num_blocks, seed):
+    generator = torch.Generator(device="cpu")
+    generator.manual_seed(int(seed))
+    return torch.randperm(num_blocks, generator=generator, device="cpu")
+
+
+def invert_permutation(perm):
+    inv = torch.empty_like(perm)
+    inv[perm] = torch.arange(perm.numel(), device=perm.device, dtype=perm.dtype)
+    return inv
+
+
+def block_permutation_to_token_permutation(block_perm, block_len):
+    token_orders = expand_block_orders_to_token_orders(
+        block_perm.view(1, -1).to(dtype=torch.long),
+        block_len=block_len,
+    )
+    return token_orders.squeeze(0).to(device="cpu", dtype=torch.long)
+
+
 def expand_block_orders_to_token_orders(block_orders, block_len=16):
     """
     Expand block orders into token orders while keeping l2r order within each block.

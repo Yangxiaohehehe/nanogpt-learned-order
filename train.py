@@ -33,7 +33,9 @@ from torch.distributed import init_process_group, destroy_process_group
 
 from AOGPT import AOGPTConfig, AOGPT
 from order_utils import (
+    block_permutation_to_token_permutation,
     build_prefix_policy_block_orders,
+    build_fixed_block_permutation,
     compute_order_entropy,
     compute_block_residual_utilities,
     compute_early_shaping_preference_quality,
@@ -47,6 +49,7 @@ from order_utils import (
     sample_random_block_orders,
     scatter_block_utilities_to_original_positions,
     token_losses_to_block_losses,
+    invert_permutation,
     update_stepwise_ema_baseline,
 )
 
@@ -70,6 +73,7 @@ wandb_run_name = 'mdm_random_order_run1' # 你的实验运行名称
 dataset = 'openwebtext'
 permute_data = False
 permute_seed = 42
+permute_mode = 'block'
 gradient_accumulation_steps = 5 * 8 # used to simulate larger batch sizes
 batch_size = 12 # if gradient_accumulation_steps > 1, this is the micro-batch size
 block_size = 1024
@@ -174,7 +178,19 @@ if block_size % block_order_block_len != 0:
 num_blocks = block_size // block_order_block_len
 
 np.random.seed(permute_seed)
-fixed_perm = torch.tensor(np.random.permutation(block_size), dtype=torch.long) if permute_data else None
+if permute_data:
+    if permute_mode != 'block':
+        raise ValueError(f"Unsupported permute_mode={permute_mode!r}. Only 'block' is supported.")
+    fixed_block_perm = build_fixed_block_permutation(num_blocks, permute_seed)
+    inverse_block_perm = invert_permutation(fixed_block_perm)
+    fixed_token_perm = block_permutation_to_token_permutation(
+        fixed_block_perm,
+        block_len=block_order_block_len,
+    )
+else:
+    fixed_block_perm = None
+    inverse_block_perm = None
+    fixed_token_perm = None
 
 # poor man's data loader
 data_dir = os.path.join('data', dataset)
@@ -195,7 +211,7 @@ def get_batch(split, batch_size_override=None):
     else:
         x, y = x.to(device), y.to(device)
     if permute_data:
-        perm_idx = fixed_perm.to(device)
+        perm_idx = fixed_token_perm.to(device)
         x = x[:, perm_idx]
         y = y[:, perm_idx]
     return x, y
@@ -1169,6 +1185,13 @@ while True:
                         'initialized': baseline_initialized,
                     },
                 }
+                if permute_data and fixed_block_perm is not None:
+                    checkpoint['data_permutation'] = {
+                        'permute_mode': permute_mode,
+                        'permute_seed': int(permute_seed),
+                        'block_perm': [int(v) for v in fixed_block_perm.tolist()],
+                        'inverse_block_perm': [int(v) for v in inverse_block_perm.tolist()],
+                    }
                 print(f"saving checkpoint to {out_dir}")
                 torch.save(checkpoint, os.path.join(out_dir, 'ckpt.pt'))
     if iter_num == 0 and eval_only:

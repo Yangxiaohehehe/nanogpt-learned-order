@@ -56,7 +56,7 @@ class CausalSelfAttention(nn.Module):
             self.register_buffer("bias", torch.tril(torch.ones(config.block_size + 1, config.block_size + 1)) 
                                         .view(1, 1, config.block_size + 1, config.block_size + 1))
 
-    def forward(self, x):
+    def forward(self, x, return_attn=False):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
@@ -67,13 +67,18 @@ class CausalSelfAttention(nn.Module):
         q, k = self.q_norm(q), self.k_norm(k)
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-        if self.flash:
+        att = None
+        if self.flash and not return_attn:
             # efficient attention using Flash Attention CUDA kernels
             y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0, is_causal=True)
         else:
             # manual implementation of attention
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-            att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+            if self.flash:
+                mask = torch.tril(torch.ones(T, T, device=x.device, dtype=torch.bool)).view(1, 1, T, T)
+                att = att.masked_fill(~mask, float('-inf'))
+            else:
+                att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
             att = self.attn_dropout(att)
             y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
@@ -81,6 +86,8 @@ class CausalSelfAttention(nn.Module):
 
         # output projection
         y = self.resid_dropout(self.c_proj(y))
+        if return_attn:
+            return y, att
         return y
 
 class MLP(nn.Module):
@@ -112,10 +119,18 @@ class Block(nn.Module):
             nn.Linear(128, 6 * config.n_embd, bias=True)
         )
 
-    def forward(self, x, c):
+    def forward(self, x, c, return_attn=False):
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (self.adaLN(c)).chunk(6, dim=-1)
-        x = x + gate_msa * self.attn(modulate(self.ln_1(x), shift_msa, scale_msa))
+        attn_out = self.attn(modulate(self.ln_1(x), shift_msa, scale_msa), return_attn=return_attn)
+        if return_attn:
+            attn_y, attn_probs = attn_out
+        else:
+            attn_y = attn_out
+            attn_probs = None
+        x = x + gate_msa * attn_y
         x = x + gate_mlp * self.mlp(modulate(self.ln_2(x), shift_mlp, scale_mlp))
+        if return_attn:
+            return x, attn_probs
         return x
 
 class FinalLayer(nn.Module):
@@ -268,12 +283,14 @@ class AOGPT(nn.Module):
         unshuffled_x[batch_indices, orders] = shuffled_x
         return unshuffled_x
     
-    def _format_outputs(self, logits, loss, token_losses=None, hidden_states=None, order_info=None):
+    def _format_outputs(self, logits, loss, token_losses=None, hidden_states=None, attentions=None, order_info=None):
         outputs = [logits, loss]
         if token_losses is not None:
             outputs.append(token_losses)
         if hidden_states is not None:
             outputs.append(hidden_states)
+        if attentions is not None:
+            outputs.append(attentions)
         return tuple(outputs)
 
     def _pool_tokens_to_blocks(self, features):
@@ -327,6 +344,7 @@ class AOGPT(nn.Module):
         random_ratio=None,
         return_token_loss=False,
         return_hidden=False,
+        return_attentions=False,
     ):
         if mode is None:
             assert orders is not None and idx.shape==orders.shape, 'mode is None, order should be given and with the same shape of idx'
@@ -341,6 +359,7 @@ class AOGPT(nn.Module):
                 orders,
                 return_token_loss=return_token_loss,
                 return_hidden=return_hidden,
+                return_attentions=return_attentions,
             )
         elif mode == 'AR':
             # get ascending orders
@@ -350,6 +369,7 @@ class AOGPT(nn.Module):
                 orders,
                 return_token_loss=return_token_loss,
                 return_hidden=return_hidden,
+                return_attentions=return_attentions,
             )
         elif mode == 'Random':
             # get random orders
@@ -359,6 +379,7 @@ class AOGPT(nn.Module):
                 orders,
                 return_token_loss=return_token_loss,
                 return_hidden=return_hidden,
+                return_attentions=return_attentions,
             )
         elif mode == 'Random_CL':
             assert random_ratio is not None
@@ -368,6 +389,7 @@ class AOGPT(nn.Module):
                 orders,
                 return_token_loss=return_token_loss,
                 return_hidden=return_hidden,
+                return_attentions=return_attentions,
             )
 
 
@@ -377,6 +399,7 @@ class AOGPT(nn.Module):
         orders,
         return_token_loss=False,
         return_hidden=False,
+        return_attentions=False,
     ):
         
         device = idx.device
@@ -407,8 +430,13 @@ class AOGPT(nn.Module):
         
         # forward the GPT model itself
         x = self.transformer.drop(x)
+        attn_outputs = [] if return_attentions else None
         for block in self.transformer.h:
-            x = block(x, target_pos_emb_final)
+            if return_attentions:
+                x, attn_probs = block(x, target_pos_emb_final, return_attn=True)
+                attn_outputs.append(attn_probs)
+            else:
+                x = block(x, target_pos_emb_final)
         x = self.transformer.final_layer(x, target_pos_emb_final)
         hidden_states_orig = self.unshuffle(x[:, 1:, :], orders)
 
@@ -431,6 +459,7 @@ class AOGPT(nn.Module):
             loss,
             token_losses=token_output,
             hidden_states=hidden_output,
+            attentions=attn_outputs,
         )
 
     def crop_block_size(self, block_size):

@@ -8,9 +8,12 @@ import torch
 
 from AOGPT import AOGPT, AOGPTConfig
 from order_utils import (
+    block_permutation_to_token_permutation,
     build_ascending_block_orders,
+    build_fixed_block_permutation,
     evaluate_block_order_quality,
     expand_block_orders_to_token_orders,
+    invert_permutation,
     kendall_tau_to_l2r_per_sample,
 )
 
@@ -103,7 +106,7 @@ def load_tokens(data_dir: Path, split: str):
     return np.memmap(split_path, dtype=np.uint16, mode="r")
 
 
-def sample_batch(tokens, batch_size: int, block_size: int, rng, device: str):
+def sample_batch(tokens, batch_size: int, block_size: int, rng, device: str, token_perm=None):
     max_start = len(tokens) - block_size
     if max_start <= 0:
         raise ValueError("Dataset split is shorter than block_size.")
@@ -111,7 +114,69 @@ def sample_batch(tokens, batch_size: int, block_size: int, rng, device: str):
     batch = torch.stack(
         [torch.from_numpy(tokens[start : start + block_size].astype(np.int64)) for start in starts]
     )
-    return batch.to(device)
+    batch = batch.to(device)
+    if token_perm is not None:
+        batch = batch[:, token_perm.to(device)]
+    return batch
+
+
+def load_block_permutation_from_checkpoint(checkpoint, num_blocks, block_len):
+    config = checkpoint.get("config", {})
+    if not bool(config.get("permute_data", False)):
+        return None
+    perm_state = checkpoint.get("data_permutation")
+    if perm_state is not None and perm_state.get("block_perm") is not None:
+        block_perm = torch.tensor(perm_state["block_perm"], dtype=torch.long)
+    else:
+        permute_mode = str(config.get("permute_mode", "block"))
+        if permute_mode != "block":
+            raise ValueError(f"Unsupported permute_mode={permute_mode!r} in checkpoint config.")
+        block_perm = build_fixed_block_permutation(num_blocks, int(config.get("permute_seed", 42)))
+    inverse_block_perm = invert_permutation(block_perm)
+    token_perm = block_permutation_to_token_permutation(block_perm, block_len=block_len)
+    return {
+        "permute_mode": "block",
+        "block_perm": block_perm,
+        "inverse_block_perm": inverse_block_perm,
+        "token_perm": token_perm,
+    }
+
+
+def map_order_to_original(order, block_perm):
+    return [int(block_perm[int(idx)].item()) for idx in order]
+
+
+def map_pair_rows_to_original(rows, block_perm):
+    mapped = []
+    for row in rows:
+        mapped.append(
+            {
+                **row,
+                "first_original": int(block_perm[int(row["first"])].item()),
+                "second_original": int(block_perm[int(row["second"])].item()),
+            }
+        )
+    return mapped
+
+
+def map_segments_to_original(segments, block_perm):
+    mapped = []
+    for row in segments:
+        mapped_segment = [int(block_perm[int(v)].item()) for v in row["segment"]]
+        mapped.append(
+            {
+                **row,
+                "segment_original": mapped_segment,
+                "first_original": int(mapped_segment[0]),
+                "last_original": int(mapped_segment[-1]),
+            }
+        )
+    return mapped
+
+
+def map_orders_tensor_to_original(orders, block_perm):
+    mapper = block_perm.to(device=orders.device, dtype=torch.long)
+    return mapper[orders.long()]
 
 
 def compute_signal_from_block_losses(block_losses, early_k, tv_weight):
@@ -533,6 +598,13 @@ def main():
     tokens = load_tokens(data_dir, args.split)
     model = build_model(checkpoint, args.device)
     autocast_context = get_autocast_context(args.device, args.dtype)
+    permutation_state = load_block_permutation_from_checkpoint(
+        checkpoint,
+        num_blocks=model.num_blocks,
+        block_len=model.block_order_block_len,
+    )
+    token_perm = None if permutation_state is None else permutation_state["token_perm"]
+    block_perm = None if permutation_state is None else permutation_state["block_perm"]
 
     early_k = max(2, model.num_blocks // 4)
     pair_score_matrix, top_pairs = mine_pair_scores(
@@ -571,7 +643,14 @@ def main():
     top_pairs_for_generation = top_pairs[: int(args.top_pair_pool_size)]
 
     for batch_idx in range(1, int(args.num_batches) + 1):
-        idx = sample_batch(tokens, int(args.batch_size), model.config.block_size, rng, args.device)
+        idx = sample_batch(
+            tokens,
+            int(args.batch_size),
+            model.config.block_size,
+            rng,
+            args.device,
+            token_perm=token_perm,
+        )
         structured_pool, random_pool = build_candidate_pool(
             num_blocks=model.num_blocks,
             pair_score_matrix=pair_score_matrix,
@@ -668,8 +747,35 @@ def main():
             prefix_len=int(args.prefix_len),
         ),
     }
+    if block_perm is not None:
+        best_structured_orders_original = map_orders_tensor_to_original(best_structured_orders, block_perm)
+        best_random_orders_original = map_orders_tensor_to_original(best_random_orders, block_perm)
+        l2r_orders_original = map_orders_tensor_to_original(l2r_orders, block_perm)
+        summaries_original = {
+            "best_structured_original_frame": summarize_selected_orders(
+                best_structured_orders_original,
+                best_structured_early,
+                best_structured_full,
+                prefix_len=int(args.prefix_len),
+            ),
+            "best_random_pool_original_frame": summarize_selected_orders(
+                best_random_orders_original,
+                best_random_early,
+                best_random_full,
+                prefix_len=int(args.prefix_len),
+            ),
+            "l2r_reference_original_frame": summarize_selected_orders(
+                l2r_orders_original,
+                l2r_early,
+                l2r_full,
+                prefix_len=int(args.prefix_len),
+            ),
+        }
+        summaries.update(summaries_original)
 
     top_pair_rows = top_pairs[: min(50, len(top_pairs))]
+    top_pair_rows_original = map_pair_rows_to_original(top_pair_rows, block_perm) if block_perm is not None else []
+    aggregated_segments_original = map_segments_to_original(aggregated_segments, block_perm) if block_perm is not None else []
     run_meta = {
         "ckpt_path": str(args.ckpt_path),
         "dataset": args.dataset or checkpoint.get("config", {}).get("dataset"),
@@ -691,6 +797,9 @@ def main():
         "seed": args.seed,
         "device": args.device,
         "dtype": args.dtype,
+        "permute_data": bool(checkpoint.get("config", {}).get("permute_data", False)),
+        "permute_mode": checkpoint.get("config", {}).get("permute_mode", ""),
+        "permute_seed": checkpoint.get("config", {}).get("permute_seed", None),
         "note": (
             "Local structure is mined from ordered pairs under the frozen checkpoint. "
             "Pair scores are computed from the first pair_score_k block reveal steps using area + tv. "
@@ -705,6 +814,14 @@ def main():
         "top_pairs": top_pair_rows,
         "aggregated_segments": aggregated_segments,
     }
+    if block_perm is not None:
+        payload["permute_map"] = {
+            "permute_mode": "block",
+            "block_perm": [int(v) for v in block_perm.tolist()],
+            "inverse_block_perm": [int(v) for v in permutation_state["inverse_block_perm"].tolist()],
+        }
+        payload["top_pairs_original"] = top_pair_rows_original
+        payload["aggregated_segments_original"] = aggregated_segments_original
     save_json(args.out_dir / "results.json", payload)
     print(f"saved structured candidate benchmark to {args.out_dir / 'results.json'}")
 

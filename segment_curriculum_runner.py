@@ -22,27 +22,31 @@ def load_json(path: Path):
         return json.load(handle)
 
 
-def infer_num_blocks_from_results(payload):
+def infer_num_blocks_from_results(payload, segments_key="aggregated_segments", top_pairs_key="top_pairs"):
     max_block = -1
-    for row in payload.get("aggregated_segments", []):
-        for value in row.get("segment", []):
+    for row in payload.get(segments_key, []):
+        values = row.get("segment_original", row.get("segment", []))
+        for value in values:
             max_block = max(max_block, int(value))
-    for row in payload.get("top_pairs", []):
-        max_block = max(max_block, int(row.get("first", -1)), int(row.get("second", -1)))
+    for row in payload.get(top_pairs_key, []):
+        first = row.get("first_original", row.get("first", -1))
+        second = row.get("second_original", row.get("second", -1))
+        max_block = max(max_block, int(first), int(second))
     if max_block < 0:
         return 0
     return max_block + 1
 
 
-def build_stage_block_layout(payload):
-    num_blocks = infer_num_blocks_from_results(payload)
-    aggregated_segments = payload.get("aggregated_segments", [])
+def build_stage_block_layout(payload, segments_key="aggregated_segments", top_pairs_key="top_pairs", original=False):
+    num_blocks = infer_num_blocks_from_results(payload, segments_key=segments_key, top_pairs_key=top_pairs_key)
+    aggregated_segments = payload.get(segments_key, [])
     segment_entries = []
     block_lookup = {}
     used_blocks = set()
 
     for segment_rank, row in enumerate(aggregated_segments, start=1):
-        segment = [int(v) for v in row.get("segment", [])]
+        raw_segment = row.get("segment_original", row.get("segment", [])) if original else row.get("segment", [])
+        segment = [int(v) for v in raw_segment]
         if len(segment) < 2:
             continue
         entry = {
@@ -94,6 +98,7 @@ def build_stage_block_layout(payload):
 
 def build_block_aggregation_trace(benchmark_root: Path, num_stages: int):
     stage_payloads = []
+    stage_payloads_original = []
     max_num_blocks = 0
 
     for stage_idx in range(1, int(num_stages) + 1):
@@ -113,6 +118,23 @@ def build_block_aggregation_trace(benchmark_root: Path, num_stages: int):
                 "block_lookup": layout["block_lookup"],
             }
         )
+        if payload.get("aggregated_segments_original"):
+            layout_original = build_stage_block_layout(
+                payload,
+                segments_key="aggregated_segments_original",
+                top_pairs_key="top_pairs_original",
+                original=True,
+            )
+            stage_payloads_original.append(
+                {
+                    "stage": int(stage_idx),
+                    "results_path": str(results_path),
+                    "aggregated_segments": payload.get("aggregated_segments_original", []),
+                    "linearized_order": layout_original["linearized_order"],
+                    "units": layout_original["units"],
+                    "block_lookup": layout_original["block_lookup"],
+                }
+            )
 
     block_paths = []
     for block_idx in range(max_num_blocks):
@@ -139,13 +161,45 @@ def build_block_aggregation_trace(benchmark_root: Path, num_stages: int):
             }
         )
 
+    block_paths_original = []
+    if stage_payloads_original:
+        for block_idx in range(max_num_blocks):
+            path = []
+            for stage_payload in stage_payloads_original:
+                lookup = stage_payload["block_lookup"].get(block_idx)
+                if lookup is None:
+                    continue
+                path.append(
+                    {
+                        "stage": int(stage_payload["stage"]),
+                        "unit_type": lookup["unit_type"],
+                        "segment_rank": lookup["segment_rank"],
+                        "position_in_segment": int(lookup["position_in_segment"]),
+                        "segment_length": int(lookup["segment_length"]),
+                        "segment_blocks": lookup["segment_blocks"],
+                    }
+                )
+            block_paths_original.append(
+                {
+                    "block": int(block_idx),
+                    "path": path,
+                    "final_stage_position": path[-1] if path else None,
+                }
+            )
+
     latest_stage = stage_payloads[-1] if stage_payloads else None
-    return {
+    latest_stage_original = stage_payloads_original[-1] if stage_payloads_original else None
+    payload = {
         "num_stages_found": int(len(stage_payloads)),
         "final_stage_linearized_order": latest_stage["linearized_order"] if latest_stage else [],
         "final_stage_units": latest_stage["units"] if latest_stage else [],
         "block_paths": block_paths,
     }
+    if latest_stage_original is not None:
+        payload["final_stage_linearized_order_original"] = latest_stage_original["linearized_order"]
+        payload["final_stage_units_original"] = latest_stage_original["units"]
+        payload["block_paths_original"] = block_paths_original
+    return payload
 
 
 def load_runner_config_from_argv(argv):
