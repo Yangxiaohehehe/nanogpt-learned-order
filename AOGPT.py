@@ -147,22 +147,6 @@ class FinalLayer(nn.Module):
         x = modulate(self.ln_f(x), shift, scale)
         return x
 
-class OrderHead(nn.Module):
-    """Lightweight block scoring head for block-level order selection."""
-
-    def __init__(self, n_embd):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(3 * n_embd, n_embd),
-            nn.GELU(),
-            nn.Linear(n_embd, 1),
-        )
-
-    def forward(self, token_emb, pos_emb, hidden_states):
-        # All inputs are aligned to the original token order: (B, T, C).
-        features = torch.cat([token_emb, pos_emb, hidden_states], dim=-1)
-        return self.net(features).squeeze(-1)
-
 @dataclass
 class AOGPTConfig:
     block_size: int = 1024
@@ -173,7 +157,6 @@ class AOGPTConfig:
     dropout: float = 0.0
     bias: bool = True # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
     block_order_block_len: int = 16
-    policy_head_input_mode: str = "pos_only"
 
 class AOGPT(nn.Module):
 
@@ -197,8 +180,6 @@ class AOGPT(nn.Module):
             final_layer = FinalLayer(config),
         ))
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=True)
-        self.policy_order_head = OrderHead(config.n_embd)
-
         # init all weights
         self.apply(self._init_weights)
         # apply special scaled init to the residual projections, per GPT-2 paper
@@ -292,55 +273,6 @@ class AOGPT(nn.Module):
         if attentions is not None:
             outputs.append(attentions)
         return tuple(outputs)
-
-    def _pool_tokens_to_blocks(self, features):
-        batch_size, seq_len, channels = features.shape
-        assert seq_len == self.config.block_size
-        return features.view(batch_size, self.num_blocks, self.block_order_block_len, channels).mean(dim=2)
-
-    def get_policy_inputs(self, idx, hidden_states):
-        """
-        Return block-level token/position embeddings and hidden states aligned to
-        the original block order.
-        """
-        batch_size, seq_len = idx.shape
-        assert seq_len == self.config.block_size
-        if hidden_states.size(1) == seq_len + 1:
-            hidden_states = hidden_states[:, 1:, :]
-        elif hidden_states.size(1) != seq_len:
-            raise ValueError(
-                f"hidden_states has unexpected sequence length {hidden_states.size(1)}; "
-                f"expected {seq_len} or {seq_len + 1}."
-            )
-        pos = torch.arange(1, seq_len + 1, dtype=torch.long, device=idx.device)
-        tok_emb = self.transformer.wte(idx)
-        pos_emb = self.transformer.wpe(pos).unsqueeze(0).expand(batch_size, -1, -1)
-        return (
-            self._pool_tokens_to_blocks(tok_emb),
-            self._pool_tokens_to_blocks(pos_emb),
-            self._pool_tokens_to_blocks(hidden_states),
-        )
-
-    def score_prefix_policy(self, idx, hidden_states, detach_inputs=False):
-        tok_emb, pos_emb, hidden_states = self.get_policy_inputs(idx, hidden_states)
-        if detach_inputs:
-            tok_emb = tok_emb.detach()
-            pos_emb = pos_emb.detach()
-            hidden_states = hidden_states.detach()
-        input_mode = getattr(self.config, "policy_head_input_mode", "pos_only")
-        if input_mode == "pos_only":
-            tok_emb = torch.zeros_like(tok_emb)
-            hidden_states = torch.zeros_like(hidden_states)
-        elif input_mode == "token_pos":
-            hidden_states = torch.zeros_like(hidden_states)
-        elif input_mode == "hidden_pos":
-            tok_emb = torch.zeros_like(tok_emb)
-        elif input_mode != "full":
-            raise ValueError(
-                f"Unsupported policy_head_input_mode={input_mode}. "
-                "Expected one of: pos_only, token_pos, hidden_pos, full."
-            )
-        return self.policy_order_head(tok_emb, pos_emb, hidden_states)
 
     def forward(
         self,
@@ -502,44 +434,26 @@ class AOGPT(nn.Module):
             if hasattr(block.attn, 'bias'):
                 block.attn.bias = block.attn.bias[:,:,:block_size + 1,:block_size + 1] # + 1 to handle the additional [None] token
 
-    def configure_optimizers(self, weight_decay, learning_rate, betas, device_type, order_head_lr_mult=1.0):
+    def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
         # start with all of the candidate parameters
         param_dict = {pn: p for pn, p in self.named_parameters()}
         # filter out those that do not require grad
         param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
-
-        order_head_params = {
-            pn: p for pn, p in param_dict.items()
-            if pn.startswith("policy_order_head.")
-        }
-        backbone_params = {
-            pn: p for pn, p in param_dict.items()
-            if not pn.startswith("policy_order_head.")
-        }
 
         def split_decay_nodecay(named_params):
             decay = [p for _, p in named_params.items() if p.dim() >= 2]
             nodecay = [p for _, p in named_params.items() if p.dim() < 2]
             return decay, nodecay
 
-        bb_decay, bb_nodecay = split_decay_nodecay(backbone_params)
-        oh_decay, oh_nodecay = split_decay_nodecay(order_head_params)
+        decay, nodecay = split_decay_nodecay(param_dict)
 
         optim_groups = []
-        if bb_decay:
-            optim_groups.append({'params': bb_decay, 'weight_decay': weight_decay, 'lr_scale': 1.0})
-        if bb_nodecay:
-            optim_groups.append({'params': bb_nodecay, 'weight_decay': 0.0, 'lr_scale': 1.0})
-        if oh_decay:
-            optim_groups.append({'params': oh_decay, 'weight_decay': weight_decay, 'lr_scale': float(order_head_lr_mult)})
-        if oh_nodecay:
-            optim_groups.append({'params': oh_nodecay, 'weight_decay': 0.0, 'lr_scale': float(order_head_lr_mult)})
-
-        num_bb_params = sum(p.numel() for p in backbone_params.values())
-        num_oh_params = sum(p.numel() for p in order_head_params.values())
-        print(f"backbone params: {num_bb_params:,}")
-        print(f"order_head params: {num_oh_params:,}")
-        print(f"order_head lr multiplier: {order_head_lr_mult}")
+        if decay:
+            optim_groups.append({'params': decay, 'weight_decay': weight_decay, 'lr_scale': 1.0})
+        if nodecay:
+            optim_groups.append({'params': nodecay, 'weight_decay': 0.0, 'lr_scale': 1.0})
+        num_params = sum(p.numel() for p in param_dict.values())
+        print(f"trainable params: {num_params:,}")
 
         # Create AdamW optimizer and use the fused version if it is available
         fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters

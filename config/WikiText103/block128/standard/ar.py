@@ -1,14 +1,13 @@
-# Train only the prefix-policy order head on top of a pretrained 64-block Random backbone.
+# AR training for the 64-block setup (block_len=4).
 
-out_dir = 'out-wikitext103-random-b64'
-init_from = 'resume'
+out_dir = 'out-wikitext103-ar-b64'
 eval_interval = 250
-eval_iters = 100
+eval_iters = 200
 log_interval = 10
 
 wandb_log = True
 wandb_project = 'ao-gpt-experiments-block-order'
-wandb_run_name = 'wikitext103-prefix-policy-order-head-b64'
+wandb_run_name = 'wikitext103-ar-b64'
 
 dataset = 'wikitext103'
 batch_size = 64
@@ -18,11 +17,10 @@ permute_data = False
 permute_seed = 42
 
 model_type = 'aogpt'
-train_stage = 'order_head'
-aogpt_train_mode = 'Random'
-main_eval_mode = 'Random'
+train_stage = 'standard'
+aogpt_train_mode = 'AR'
+main_eval_mode = 'AR'
 generalization_eval_mode = ''
-
 n_layer = 3
 n_head = 4
 n_embd = 128
@@ -37,11 +35,10 @@ baseline_momentum = 0.95
 lambda_list = 0.1
 order_temperature = 1.0
 order_entropy_temperature = 1.0
-order_head_lr_mult = 1.0
 
-learning_rate = 3e-4
-max_iters = 5000
-lr_decay_iters = 5000
-min_lr = 3e-5
+learning_rate = 1e-3
+max_iters = 20000
+lr_decay_iters = 20000
+min_lr = 1e-4
 beta2 = 0.99
 warmup_iters = 0

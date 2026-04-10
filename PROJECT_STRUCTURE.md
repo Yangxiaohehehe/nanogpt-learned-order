@@ -15,10 +15,10 @@ should be organized going forward.
 
 ### Core code
 - `AOGPT.py`: AO-GPT model with block-order support and prefix policy head.
+- `AOGPT.py`: AO-GPT model with block-order support.
 - `train.py`: main training loop for all stages.
 - `order_utils.py`: block-order utilities, search helpers, ranking losses, metrics.
 - `eval_prefix_pairs.py`: pair-prefix ranking evaluation.
-- `export_order_head_ranking.py`: export block scores from the order head.
 - `signal_benchmark.py`: search-time benchmark for candidate order signals.
 - `ar_likeness_benchmark.py`: compare AR-mode and Random-mode trajectory scores under a fixed checkpoint.
 

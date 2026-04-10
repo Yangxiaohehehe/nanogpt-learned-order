@@ -154,84 +154,6 @@ def listwise_block_order_loss(scores, block_utilities, temperature=1.0, eps=1e-8
     return -(q * log_p).sum(dim=-1).mean()
 
 
-def compute_early_shaping_preference_quality(block_losses, early_k=4, tv_weight=0.3):
-    """
-    Early-shaping quality used for preference supervision.
-
-    Higher is better. This is designed to reward:
-    - lower early loss area
-    - smoother early trajectory
-
-    It is a training-time preference signal, not an l2r label.
-    """
-    early_k = max(1, min(int(early_k), block_losses.size(-1)))
-    early = block_losses[:, :early_k].float()
-    area_term = -early.mean(dim=-1)
-    if early.size(-1) < 2:
-        tv_term = torch.zeros_like(area_term)
-    else:
-        tv_term = (early[:, 1:] - early[:, :-1]).abs().sum(dim=-1)
-    return area_term - float(tv_weight) * tv_term
-
-
-def prefix_plackett_luce_logprob(scores, block_orders, prefix_k, eps=1e-8):
-    """
-    Compute the log-probability of the prefix of a block order under a
-    Plackett-Luce model induced by per-block scores.
-    """
-    batch_size, num_blocks = scores.shape
-    prefix_k = max(1, min(int(prefix_k), num_blocks))
-    remaining_mask = torch.ones_like(scores, dtype=torch.bool)
-    logprob = torch.zeros(batch_size, device=scores.device, dtype=torch.float32)
-
-    for step in range(prefix_k):
-        masked_scores = scores.masked_fill(~remaining_mask, float("-inf"))
-        step_logp = F.log_softmax(masked_scores.clamp(min=-1e9, max=1e9), dim=-1)
-        chosen = block_orders[:, step : step + 1]
-        logprob = logprob + step_logp.gather(1, chosen).squeeze(1)
-        remaining_mask.scatter_(1, chosen, False)
-    return logprob
-
-
-def pairwise_order_preference_loss(scores, preferred_orders, other_orders, prefix_k, margin=0.0):
-    """
-    Preference loss for the order head.
-
-    The head does not regress absolute utility; it only learns to prefer one
-    candidate order over another.
-    """
-    preferred_logprob = prefix_plackett_luce_logprob(scores, preferred_orders, prefix_k=prefix_k)
-    other_logprob = prefix_plackett_luce_logprob(scores, other_orders, prefix_k=prefix_k)
-    logits = preferred_logprob - other_logprob - float(margin)
-    loss = F.softplus(-logits).mean()
-    accuracy = (logits > 0).float().mean()
-    return loss, accuracy, preferred_logprob, other_logprob
-
-
-def build_prefix_policy_block_orders(scores, k, generator=None):
-    """
-    Build block reveal orders from top-k scored prefix + random suffix.
-    """
-    batch_size, num_blocks = scores.shape
-    k = max(0, min(int(k), num_blocks))
-    _, sorted_idx = torch.sort(scores, dim=-1, descending=True, stable=True)
-    prefix = sorted_idx[:, :k]
-
-    random_keys = torch.rand(batch_size, num_blocks, device=scores.device, generator=generator)
-    random_perm = torch.argsort(random_keys, dim=-1)
-    prefix_mask = torch.zeros(batch_size, num_blocks, dtype=torch.bool, device=scores.device)
-    if k > 0:
-        prefix_mask.scatter_(1, prefix, True)
-    suffix_mask = ~prefix_mask.gather(1, random_perm)
-    suffix = random_perm[suffix_mask].view(batch_size, num_blocks - k)
-    block_orders = torch.cat([prefix, suffix], dim=-1)
-
-    expected = torch.arange(num_blocks, device=scores.device).unsqueeze(0).expand(batch_size, -1)
-    if not torch.equal(torch.sort(block_orders, dim=-1).values, expected):
-        raise ValueError("build_prefix_policy_block_orders produced an invalid block permutation")
-    return block_orders
-
-
 def compute_prefix_auc(step_losses, k):
     k = max(1, min(int(k), step_losses.size(1)))
     return step_losses[:, :k].mean()
@@ -515,7 +437,3 @@ def compute_token_utilities(*args, **kwargs):
 
 def listwise_order_loss(*args, **kwargs):
     raise RuntimeError("listwise_order_loss is deprecated; use listwise_block_order_loss instead.")
-
-
-def build_prefix_policy_orders(*args, **kwargs):
-    raise RuntimeError("build_prefix_policy_orders is deprecated; use build_prefix_policy_block_orders instead.")

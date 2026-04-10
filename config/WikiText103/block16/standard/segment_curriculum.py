@@ -18,8 +18,6 @@ segment_max_lens = "4,6"
 segment_max_units_per_order = 2
 segment_top_k_pairs = 64
 
-disable_order_head = True
-
 # Benchmark settings
 benchmark_batch_size = 128
 benchmark_num_batches = 200

@@ -225,7 +225,6 @@ def build_train_cmd(
     out_dir,
     init_from,
     max_iters,
-    use_order_head,
     segment_guided_ratio,
     segment_source_json,
     segment_top_k_pairs,
@@ -239,7 +238,6 @@ def build_train_cmd(
         f"--out_dir={out_dir}",
         f"--init_from={init_from}",
         f"--max_iters={int(max_iters)}",
-        f"--use_order_head={bool(use_order_head)}",
         f"--segment_guided_ratio={float(segment_guided_ratio)}",
         f"--segment_top_k_pairs={int(segment_top_k_pairs)}",
         f"--segment_max_len={int(segment_max_len)}",
@@ -330,7 +328,6 @@ def parse_args():
     )
     parser.add_argument("--segment_max_units_per_order", type=int, default=int(config_ns.get("segment_max_units_per_order", 2)))
     parser.add_argument("--segment_top_k_pairs", type=int, default=int(config_ns.get("segment_top_k_pairs", 64)))
-    parser.add_argument("--disable_order_head", action="store_true")
     parser.add_argument("--benchmark_batch_size", type=int, default=int(config_ns.get("benchmark_batch_size", 64)))
     parser.add_argument("--benchmark_num_batches", type=int, default=int(config_ns.get("benchmark_num_batches", 200)))
     parser.add_argument("--pair_mining_batches", type=int, default=int(config_ns.get("pair_mining_batches", 24)))
@@ -345,8 +342,6 @@ def parse_args():
     parser.add_argument("--tv_weight", type=float, default=float(config_ns.get("tv_weight", 0.3)))
     parser.add_argument("--benchmark_log_every_batches", type=int, default=int(config_ns.get("benchmark_log_every_batches", 10)))
     args = parser.parse_args(filtered_argv)
-    if bool(config_ns.get("disable_order_head", False)):
-        args.disable_order_head = True
     return args
 
 
@@ -375,7 +370,6 @@ def main():
             out_dir=train_out_dir,
             init_from="scratch",
             max_iters=args.warmup_iters,
-            use_order_head=not args.disable_order_head,
             segment_guided_ratio=0.0,
             segment_source_json="",
             segment_top_k_pairs=args.segment_top_k_pairs,
@@ -418,7 +412,6 @@ def main():
                 out_dir=train_out_dir,
                 init_from="resume",
                 max_iters=cumulative_max_iters,
-                use_order_head=not args.disable_order_head,
                 segment_guided_ratio=ratios[stage_idx - 1],
                 segment_source_json=str(benchmark_dir / "results.json"),
                 segment_top_k_pairs=args.segment_top_k_pairs,
@@ -445,7 +438,6 @@ def main():
         "segment_max_lens": segment_lens,
         "segment_max_units_per_order": int(args.segment_max_units_per_order),
         "segment_top_k_pairs": int(args.segment_top_k_pairs),
-        "disable_order_head": bool(args.disable_order_head),
     }
     (benchmark_root / "runner_meta.json").write_text(
         json.dumps(final_payload, ensure_ascii=False, indent=2),

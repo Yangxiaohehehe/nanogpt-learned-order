@@ -10,14 +10,6 @@ This directory is organized by block granularity and stage:
 Inside each block directory:
 
 - `standard/`: stage-1 backbone training configs
-- `policy/`: order-head / policy-backbone / joint configs
-- `eval/`: evaluation-only configs such as local swap search
-
-Compatibility note:
-
-The top-level files such as `random.py`, `random_b32.py`, and
-`prefix_policy_order_head.py` are kept as thin wrappers so existing commands
-continue to work.
 
 Recommended direct entry points:
 

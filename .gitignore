@@ -16,5 +16,4 @@ wandb/
 run_logs/
 out*/
 Report/*smoke/
-Report/*/order_head_probe_ckpt.pt
 Report/trajectory_signature_proposal/*random_avg*.json
