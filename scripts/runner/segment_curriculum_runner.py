@@ -5,6 +5,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS_ROOT = REPO_ROOT / "scripts"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 
 def parse_csv_list(raw_value, cast_fn):
     values = [item.strip() for item in str(raw_value).split(",") if item.strip()]
@@ -212,6 +217,8 @@ def load_runner_config_from_argv(argv):
         else:
             filtered.append(arg)
     if config_path is not None:
+        if not config_path.is_absolute():
+            config_path = REPO_ROOT / config_path
         print(f"Overriding runner config with {config_path}:")
         with open(config_path, "r", encoding="utf-8") as handle:
             print(handle.read())
@@ -268,7 +275,7 @@ def build_benchmark_cmd(
 ):
     return [
         sys.executable,
-        "structured_candidate_benchmark.py",
+        str(SCRIPTS_ROOT / "benchmark" / "structured_candidate_benchmark.py"),
         f"--ckpt_path={ckpt_path}",
         f"--out_dir={benchmark_out_dir}",
         f"--batch_size={int(batch_size)}",
@@ -347,8 +354,8 @@ def parse_args():
 
 def main():
     args = parse_args()
-    repo_dir = Path(__file__).resolve().parent
-    config_path = args.config
+    repo_dir = REPO_ROOT
+    config_path = args.config if args.config.is_absolute() else REPO_ROOT / args.config
 
     ratios = parse_csv_list(args.segment_guided_ratios, float)
     segment_lens = parse_csv_list(args.segment_max_lens, int)
@@ -358,7 +365,7 @@ def main():
         raise ValueError("segment_max_lens length must equal num_curriculum_stages")
 
     train_out_dir = args.train_out_dir
-    benchmark_root = args.benchmark_root
+    benchmark_root = args.benchmark_root if args.benchmark_root.is_absolute() else REPO_ROOT / args.benchmark_root
     benchmark_root.mkdir(parents=True, exist_ok=True)
     ckpt_path = repo_dir / train_out_dir / "ckpt.pt"
 

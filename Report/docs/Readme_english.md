@@ -709,8 +709,8 @@ Based on the results above, the latest main line has shifted away from “direct
 
 This workflow currently uses two scripts:
 
-- structure mining: [`hierarchical_structured_benchmark.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/hierarchical_structured_benchmark.py)
-- stage-wise training orchestration: [`segment_curriculum_runner.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/segment_curriculum_runner.py)
+- structure mining: [`hierarchical_structured_benchmark.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/scripts/benchmark/hierarchical_structured_benchmark.py)
+- stage-wise training orchestration: [`segment_curriculum_runner.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/scripts/runner/segment_curriculum_runner.py)
 
 ### 17.1 Overall workflow
 
@@ -892,7 +892,7 @@ Run:
 ```bash
 source /home/devbox/project/bin/activate && \
 cd /home/devbox/project/AOGPT-test-order/nanogpt_learned_order && \
-python segment_curriculum_runner.py \
+python scripts/runner/segment_curriculum_runner.py \
   config/WikiText103/block32/standard/segment_curriculum.py
 ```
 
@@ -935,9 +935,9 @@ In one sentence:
 
 At this point, three curriculum runs have been completed:
 
-- [`segment_curriculum_b16`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16)
-- [`segment_curriculum_b32`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32)
-- [`segment_curriculum_b64`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64)
+- [`segment_curriculum_b16`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b16)
+- [`segment_curriculum_b32`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b32)
+- [`segment_curriculum_b64`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b64)
 
 The shared conclusion across all three runs is:
 
@@ -949,9 +949,9 @@ The shared conclusion across all three runs is:
 
 Files:
 
-- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/stage_01/results.json)
-- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/stage_02/results.json)
-- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/block_aggregation_trace.json)
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b16/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b16/stage_02/results.json)
+- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b16/block_aggregation_trace.json)
 
 Key observations:
 
@@ -982,8 +982,8 @@ This means that in the `block16` setting, the workflow already recovers a global
 
 Files:
 
-- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32/stage_01/results.json)
-- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32/stage_02/results.json)
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b32/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b32/stage_02/results.json)
 
 Key observations:
 
@@ -1012,9 +1012,9 @@ This suggests that in `block32`, the model already develops a fairly strong glob
 
 Files:
 
-- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/stage_01/results.json)
-- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/stage_02/results.json)
-- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/block_aggregation_trace.json)
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b64/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b64/stage_02/results.json)
+- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b64/block_aggregation_trace.json)
 
 Key observations:
 

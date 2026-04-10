@@ -17,3 +17,4 @@ run_logs/
 out*/
 Report/*smoke/
 Report/trajectory_signature_proposal/*random_avg*.json
+Report/trajectory/trajectory_signature_proposal/*random_avg*.json

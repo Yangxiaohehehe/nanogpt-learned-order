@@ -5,10 +5,15 @@ from contextlib import nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+import sys
 
 import numpy as np
 import torch
 import torch.nn.functional as F
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from AOGPT import AOGPT, AOGPTConfig
 from order_utils import (
@@ -67,7 +72,7 @@ def resolve_data_dir(config: EvalConfig, checkpoint: Dict) -> Path:
     dataset = config.dataset or checkpoint.get("config", {}).get("dataset")
     if dataset is None:
         raise ValueError("Could not determine dataset. Pass --dataset or --data_dir.")
-    return Path(__file__).resolve().parent / "data" / dataset
+    return REPO_ROOT / "data" / dataset
 
 
 def resolve_block_size(config: EvalConfig, checkpoint: Dict) -> int:

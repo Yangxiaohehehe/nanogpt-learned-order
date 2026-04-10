@@ -1,11 +1,11 @@
-# Preset config for segment_curriculum_runner.py
+# Preset config for scripts/runner/segment_curriculum_runner.py
 # Usage:
-#   python segment_curriculum_runner.py config/WikiText103/block16/standard/segment_curriculum.py
+#   python scripts/runner/segment_curriculum_runner.py config/WikiText103/block16/standard/segment_curriculum.py
 
 config = "config/WikiText103/block16/standard/random.py"
 
 train_out_dir = "out-wikitext103-random-b16-curriculum"
-benchmark_root = "Report/segment_curriculum_b16"
+benchmark_root = "Report/curriculum/segment_curriculum_b16"
 
 # block16 is the lightest setup here, so we can afford a slightly stronger
 # benchmark configuration than block32/block64.

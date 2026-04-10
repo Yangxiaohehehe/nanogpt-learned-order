@@ -705,8 +705,8 @@ U_t = -\alpha \tilde{A}_t - \beta \tilde{V}_t
 
 这条流程由两个脚本组成：
 
-- 结构挖掘：[`hierarchical_structured_benchmark.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/hierarchical_structured_benchmark.py)
-- 分阶段训练调度：[`segment_curriculum_runner.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/segment_curriculum_runner.py)
+- 结构挖掘：[`hierarchical_structured_benchmark.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/scripts/benchmark/hierarchical_structured_benchmark.py)
+- 分阶段训练调度：[`segment_curriculum_runner.py`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/scripts/runner/segment_curriculum_runner.py)
 
 ### 17.1 整体流程
 
@@ -886,7 +886,7 @@ U_t = -\alpha \tilde{A}_t - \beta \tilde{V}_t
 ```bash
 source /home/devbox/project/bin/activate && \
 cd /home/devbox/project/AOGPT-test-order/nanogpt_learned_order && \
-python segment_curriculum_runner.py \
+python scripts/runner/segment_curriculum_runner.py \
   config/WikiText103/block32/standard/segment_curriculum.py
 ```
 
@@ -929,9 +929,9 @@ python segment_curriculum_runner.py \
 
 目前已经完成了三档 curriculum 实验：
 
-- [`segment_curriculum_b16`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16)
-- [`segment_curriculum_b32`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32)
-- [`segment_curriculum_b64`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64)
+- [`segment_curriculum_b16`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b16)
+- [`segment_curriculum_b32`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b32)
+- [`segment_curriculum_b64`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b64)
 
 三档实验的共同结论是：
 
@@ -943,9 +943,9 @@ python segment_curriculum_runner.py \
 
 文件：
 
-- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/stage_01/results.json)
-- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/stage_02/results.json)
-- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b16/block_aggregation_trace.json)
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b16/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b16/stage_02/results.json)
+- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b16/block_aggregation_trace.json)
 
 结果特点：
 
@@ -976,8 +976,8 @@ python segment_curriculum_runner.py \
 
 文件：
 
-- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32/stage_01/results.json)
-- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b32/stage_02/results.json)
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b32/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b32/stage_02/results.json)
 
 结果特点：
 
@@ -1006,9 +1006,9 @@ python segment_curriculum_runner.py \
 
 文件：
 
-- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/stage_01/results.json)
-- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/stage_02/results.json)
-- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/segment_curriculum_b64/block_aggregation_trace.json)
+- [`stage_01/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b64/stage_01/results.json)
+- [`stage_02/results.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b64/stage_02/results.json)
+- [`block_aggregation_trace.json`](/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b64/block_aggregation_trace.json)
 
 结果特点：
 

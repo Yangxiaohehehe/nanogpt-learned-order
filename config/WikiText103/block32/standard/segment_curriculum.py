@@ -1,11 +1,11 @@
-# Preset config for segment_curriculum_runner.py
+# Preset config for scripts/runner/segment_curriculum_runner.py
 # Usage:
-#   python segment_curriculum_runner.py config/WikiText103/block32/standard/segment_curriculum.py
+#   python scripts/runner/segment_curriculum_runner.py config/WikiText103/block32/standard/segment_curriculum.py
 
 config = "config/WikiText103/block32/standard/random.py"
 
 train_out_dir = "out-wikitext103-random-b32-curriculum"
-benchmark_root = "Report/segment_curriculum_b32"
+benchmark_root = "Report/curriculum/segment_curriculum_b32"
 
 warmup_iters = 7000
 stage_iters = 7000

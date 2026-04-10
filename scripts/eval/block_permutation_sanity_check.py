@@ -2,9 +2,14 @@ import argparse
 import json
 from contextlib import nullcontext
 from pathlib import Path
+import sys
 
 import numpy as np
 import torch
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from AOGPT import AOGPT, AOGPTConfig
 from order_utils import (
@@ -72,7 +77,7 @@ def resolve_data_dir(args, checkpoint):
     dataset = args.dataset or checkpoint.get("config", {}).get("dataset")
     if dataset is None:
         raise ValueError("Could not infer dataset. Pass --dataset or --data_dir.")
-    return Path(__file__).resolve().parent / "data" / dataset
+    return REPO_ROOT / "data" / dataset
 
 
 def load_tokens(data_dir: Path, split: str):

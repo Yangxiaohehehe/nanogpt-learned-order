@@ -1,11 +1,11 @@
-# Preset config for segment_curriculum_runner.py
+# Preset config for scripts/runner/segment_curriculum_runner.py
 # Usage:
-#   python segment_curriculum_runner.py config/WikiText103/block64/standard/segment_curriculum.py
+#   python scripts/runner/segment_curriculum_runner.py config/WikiText103/block64/standard/segment_curriculum.py
 
 config = "config/WikiText103/block64/standard/random.py"
 
 train_out_dir = "out-wikitext103-random-b64-curriculum"
-benchmark_root = "Report/segment_curriculum_b64"
+benchmark_root = "Report/curriculum/segment_curriculum_b64"
 
 # block64 has 64 * 63 ordered pairs, so we keep pair mining selective while
 # making the curriculum itself stronger across more stages.

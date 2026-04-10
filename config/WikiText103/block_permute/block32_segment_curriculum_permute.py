@@ -1,11 +1,11 @@
-# Preset config for segment_curriculum_runner.py
+# Preset config for scripts/runner/segment_curriculum_runner.py
 # Usage:
-#   python segment_curriculum_runner.py config/WikiText103/block_permute/block32_segment_curriculum_permute.py
+#   python scripts/runner/segment_curriculum_runner.py config/WikiText103/block_permute/block32_segment_curriculum_permute.py
 
 config = "config/WikiText103/block_permute/block32_random_permute.py"
 
 train_out_dir = "out-wikitext103-random-b32-curriculum-permute-block"
-benchmark_root = "Report/segment_curriculum_b32_permute_block"
+benchmark_root = "Report/curriculum/segment_curriculum_b32_permute_block"
 
 warmup_iters = 7000
 stage_iters = 7000

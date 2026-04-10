@@ -9,6 +9,10 @@ from pathlib import Path
 import numpy as np
 import torch
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from AOGPT import AOGPT, AOGPTConfig
 from order_utils import (
     block_permutation_to_token_permutation,
@@ -74,7 +78,7 @@ def parse_args():
     parser.add_argument("--probe-prefix-len", type=int, default=int(config_ns.get("probe_prefix_len", 6)))
     parser.add_argument("--target-probe-index", type=int, default=int(config_ns.get("target_probe_index", 3)))
     parser.add_argument("--seed", type=int, default=int(config_ns.get("seed", 12345)))
-    parser.add_argument("--out_dir", type=Path, default=Path(config_ns.get("out_dir", "Report/proposal_benchmark")))
+    parser.add_argument("--out_dir", type=Path, default=Path(config_ns.get("out_dir", "Report/trajectory/proposal_benchmark")))
     parser.add_argument(
         "--device",
         type=str,
@@ -136,7 +140,7 @@ def resolve_data_dir(dataset_arg, data_dir_arg, checkpoint):
     dataset = dataset_arg or checkpoint.get("config", {}).get("dataset")
     if dataset is None:
         raise ValueError("Could not infer dataset. Pass config, --dataset, or --data_dir.")
-    return Path(__file__).resolve().parent / "data" / dataset
+    return REPO_ROOT / "data" / dataset
 
 
 def load_tokens(data_dir: Path, split: str):

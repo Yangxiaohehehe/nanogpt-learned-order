@@ -2,9 +2,14 @@ import argparse
 import json
 from contextlib import nullcontext
 from pathlib import Path
+import sys
 
 import numpy as np
 import torch
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from AOGPT import AOGPT, AOGPTConfig
 from order_utils import token_losses_to_block_losses
@@ -25,7 +30,7 @@ def parse_args():
     parser.add_argument(
         "--out_dir",
         type=Path,
-        default=Path("Report/ar_likeness_benchmark"),
+        default=Path("Report/analysis/ar_likeness_benchmark"),
     )
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--data_dir", type=Path, default=None)
@@ -84,7 +89,7 @@ def resolve_data_dir(args, checkpoint):
     dataset = args.dataset or checkpoint.get("config", {}).get("dataset")
     if dataset is None:
         raise ValueError("Could not infer dataset. Pass --dataset or --data_dir.")
-    return Path(__file__).resolve().parent / "data" / dataset
+    return REPO_ROOT / "data" / dataset
 
 
 def load_tokens(data_dir: Path, split: str):
