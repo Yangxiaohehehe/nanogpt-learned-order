@@ -1,13 +1,13 @@
 # Stage 1: train the Random backbone that later stages resume from.
 
-out_dir = 'out-wikitext103-random'
+out_dir = 'out-wikitext103-random-b16'
 eval_interval = 250
 eval_iters = 200
 log_interval = 10
 
 wandb_log = True
 wandb_project = 'ao-gpt-experiments-block-order'
-wandb_run_name = 'wikitext103-random'
+wandb_run_name = 'wikitext103-random-b16'
 
 dataset = 'wikitext103'
 batch_size = 64

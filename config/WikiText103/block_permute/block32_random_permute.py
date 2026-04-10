@@ -1,6 +1,6 @@
 # Block-level permutation baseline for the 32-block setup.
 
-out_dir = 'out-wikitext103-random-b32-permute-block'
+out_dir = 'out-wikitext103-random-b32-permute-block-base'
 eval_interval = 250
 eval_iters = 200
 log_interval = 10

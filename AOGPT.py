@@ -305,6 +305,13 @@ class AOGPT(nn.Module):
         """
         batch_size, seq_len = idx.shape
         assert seq_len == self.config.block_size
+        if hidden_states.size(1) == seq_len + 1:
+            hidden_states = hidden_states[:, 1:, :]
+        elif hidden_states.size(1) != seq_len:
+            raise ValueError(
+                f"hidden_states has unexpected sequence length {hidden_states.size(1)}; "
+                f"expected {seq_len} or {seq_len + 1}."
+            )
         pos = torch.arange(1, seq_len + 1, dtype=torch.long, device=idx.device)
         tok_emb = self.transformer.wte(idx)
         pos_emb = self.transformer.wpe(pos).unsqueeze(0).expand(batch_size, -1, -1)
@@ -344,6 +351,7 @@ class AOGPT(nn.Module):
         random_ratio=None,
         return_token_loss=False,
         return_hidden=False,
+        hidden_return_mode="original",
         return_attentions=False,
     ):
         if mode is None:
@@ -359,6 +367,7 @@ class AOGPT(nn.Module):
                 orders,
                 return_token_loss=return_token_loss,
                 return_hidden=return_hidden,
+                hidden_return_mode=hidden_return_mode,
                 return_attentions=return_attentions,
             )
         elif mode == 'AR':
@@ -369,6 +378,7 @@ class AOGPT(nn.Module):
                 orders,
                 return_token_loss=return_token_loss,
                 return_hidden=return_hidden,
+                hidden_return_mode=hidden_return_mode,
                 return_attentions=return_attentions,
             )
         elif mode == 'Random':
@@ -379,6 +389,7 @@ class AOGPT(nn.Module):
                 orders,
                 return_token_loss=return_token_loss,
                 return_hidden=return_hidden,
+                hidden_return_mode=hidden_return_mode,
                 return_attentions=return_attentions,
             )
         elif mode == 'Random_CL':
@@ -389,6 +400,7 @@ class AOGPT(nn.Module):
                 orders,
                 return_token_loss=return_token_loss,
                 return_hidden=return_hidden,
+                hidden_return_mode=hidden_return_mode,
                 return_attentions=return_attentions,
             )
 
@@ -399,6 +411,7 @@ class AOGPT(nn.Module):
         orders,
         return_token_loss=False,
         return_hidden=False,
+        hidden_return_mode="original",
         return_attentions=False,
     ):
         
@@ -439,6 +452,8 @@ class AOGPT(nn.Module):
                 x = block(x, target_pos_emb_final)
         x = self.transformer.final_layer(x, target_pos_emb_final)
         hidden_states_orig = self.unshuffle(x[:, 1:, :], orders)
+        hidden_states_with_none = torch.cat([x[:, :1, :], hidden_states_orig], dim=1)
+        predictor_hidden_states = x[:, :-1, :]
 
 
         # if we are given some desired targets also calculate the loss
@@ -453,7 +468,18 @@ class AOGPT(nn.Module):
         ).view_as(shift_targets)
         loss = token_losses.mean()
         token_output = token_losses.detach() if return_token_loss else None
-        hidden_output = hidden_states_orig if return_hidden else None
+        if return_hidden:
+            if hidden_return_mode == "original":
+                hidden_output = hidden_states_with_none
+            elif hidden_return_mode == "predictor":
+                hidden_output = predictor_hidden_states
+            else:
+                raise ValueError(
+                    f"Unsupported hidden_return_mode={hidden_return_mode}. "
+                    "Expected one of: original, predictor."
+                )
+        else:
+            hidden_output = None
         return self._format_outputs(
             logits,
             loss,
