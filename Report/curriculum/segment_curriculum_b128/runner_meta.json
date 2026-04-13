@@ -1,0 +1,20 @@
+{
+  "config": "/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/config/WikiText103/block128/standard/random.py",
+  "train_out_dir": "out-wikitext103-random-b128-curriculum",
+  "benchmark_root": "/home/devbox/project/AOGPT-test-order/nanogpt_learned_order/Report/curriculum/segment_curriculum_b128",
+  "warmup_iters": 7000,
+  "stage_iters": 7000,
+  "num_curriculum_stages": 3,
+  "segment_guided_ratios": [
+    0.3,
+    0.5,
+    0.7
+  ],
+  "segment_max_lens": [
+    4,
+    6,
+    8
+  ],
+  "segment_max_units_per_order": 3,
+  "segment_top_k_pairs": 48
+}

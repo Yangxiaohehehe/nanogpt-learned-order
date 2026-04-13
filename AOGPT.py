@@ -50,10 +50,14 @@ class CausalSelfAttention(nn.Module):
         self.k_norm = RMSNorm(self.n_embd // self.n_head)
         # flash attention make GPU go brrrrr but support is only in PyTorch >= 2.0
         self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
+        self.force_manual_attention = bool(getattr(config, "force_manual_attention", False))
         if not self.flash:
             print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
             # causal mask to ensure that attention is only applied to the left in the input sequence ; + 1 to handle the additional [None] token
             self.register_buffer("bias", torch.tril(torch.ones(config.block_size + 1, config.block_size + 1)) 
+                                        .view(1, 1, config.block_size + 1, config.block_size + 1))
+        elif self.force_manual_attention:
+            self.register_buffer("bias", torch.tril(torch.ones(config.block_size + 1, config.block_size + 1))
                                         .view(1, 1, config.block_size + 1, config.block_size + 1))
 
     def forward(self, x, return_attn=False):
@@ -68,17 +72,18 @@ class CausalSelfAttention(nn.Module):
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         att = None
-        if self.flash and not return_attn:
+        use_flash = self.flash and not self.force_manual_attention and not return_attn
+        if use_flash:
             # efficient attention using Flash Attention CUDA kernels
             y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0, is_causal=True)
         else:
             # manual implementation of attention
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-            if self.flash:
+            if hasattr(self, "bias"):
+                att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+            else:
                 mask = torch.tril(torch.ones(T, T, device=x.device, dtype=torch.bool)).view(1, 1, T, T)
                 att = att.masked_fill(~mask, float('-inf'))
-            else:
-                att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
             att = self.attn_dropout(att)
             y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
@@ -157,6 +162,7 @@ class AOGPTConfig:
     dropout: float = 0.0
     bias: bool = True # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
     block_order_block_len: int = 16
+    force_manual_attention: bool = False
 
 class AOGPT(nn.Module):
 
@@ -189,6 +195,12 @@ class AOGPT(nn.Module):
 
         # report number of parameters
         print("number of parameters: %.2fM" % (self.get_num_params()/1e6,))
+
+    def set_attention_backend(self, force_manual_attention):
+        force_manual_attention = bool(force_manual_attention)
+        self.config.force_manual_attention = force_manual_attention
+        for block in self.transformer.h:
+            block.attn.force_manual_attention = force_manual_attention
 
     def get_num_params(self, non_embedding=True):
         """
