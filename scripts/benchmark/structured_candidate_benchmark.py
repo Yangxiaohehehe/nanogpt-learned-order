@@ -50,6 +50,11 @@ def parse_args():
     parser.add_argument("--pair_score_k", type=int, default=2)
     parser.add_argument("--tv_weight", type=float, default=0.3)
     parser.add_argument("--log_every_batches", type=int, default=10)
+    parser.add_argument(
+        "--save_all_pair_scores",
+        action="store_true",
+        help="Save the full ranked pair list with scores, not only the top rows in results.json.",
+    )
     parser.add_argument("--seed", type=int, default=12345)
     parser.add_argument(
         "--device",
@@ -781,10 +786,14 @@ def main():
         summaries.update(summaries_original)
 
     top_pair_rows = top_pairs[: min(50, len(top_pairs))]
+    full_pair_rows = top_pairs
+    aggregated_segments_raw = aggregated_segments
     if block_perm is not None:
         top_pair_rows = map_pair_rows_to_original(top_pair_rows, block_perm)
+        full_pair_rows = map_pair_rows_to_original(full_pair_rows, block_perm)
         aggregated_segments = map_segments_to_original(aggregated_segments, block_perm)
     top_pair_rows_original = top_pair_rows if block_perm is not None else []
+    full_pair_rows_original = full_pair_rows if block_perm is not None else []
     aggregated_segments_original = aggregated_segments if block_perm is not None else []
     run_meta = {
         "ckpt_path": str(args.ckpt_path),
@@ -795,6 +804,7 @@ def main():
         "pair_mining_batches": args.pair_mining_batches,
         "pair_eval_batch_size": args.pair_eval_batch_size,
         "pair_score_k": args.pair_score_k,
+        "save_all_pair_scores": bool(args.save_all_pair_scores),
         "candidate_eval_batch_size": args.candidate_eval_batch_size,
         "random_pool_size": args.random_pool_size,
         "structured_pool_size": args.structured_pool_size,
@@ -824,6 +834,10 @@ def main():
         "top_pairs": top_pair_rows,
         "aggregated_segments": aggregated_segments,
     }
+    if bool(args.save_all_pair_scores):
+        payload["all_pairs_ranked"] = full_pair_rows
+        payload["pair_score_matrix"] = pair_score_matrix.tolist()
+        payload["aggregated_segments_internal_frame"] = aggregated_segments_raw
     if block_perm is not None:
         payload["permute_map"] = {
             "permute_mode": "block",
@@ -831,6 +845,8 @@ def main():
             "inverse_block_perm": [int(v) for v in permutation_state["inverse_block_perm"].tolist()],
         }
         payload["top_pairs_original"] = top_pair_rows_original
+        if bool(args.save_all_pair_scores):
+            payload["all_pairs_ranked_original"] = full_pair_rows_original
         payload["aggregated_segments_original"] = aggregated_segments_original
     save_json(args.out_dir / "results.json", payload)
     print(f"saved structured candidate benchmark to {args.out_dir / 'results.json'}")

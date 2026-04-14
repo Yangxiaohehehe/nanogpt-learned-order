@@ -22,6 +22,7 @@ import math
 import pickle
 import sys
 import json
+from contextlib import nullcontext
 
 import numpy as np
 import torch
@@ -49,6 +50,9 @@ log_interval = 1
 eval_iters = 200
 eval_only = False # if True, script exits right after the first eval
 always_save_checkpoint = True # if True, always save a checkpoint after each eval
+save_iter_checkpoints = False
+save_iter_checkpoint_dir = ''
+save_iter_checkpoint_keep = 0
 init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
 # wandb logging
 wandb_log = True 
@@ -247,6 +251,35 @@ model.to(device)
 
 if train_stage != 'standard':
     raise ValueError(f"Unsupported train_stage={train_stage!r}. Only 'standard' is available.")
+
+
+def _save_iteration_checkpoint(checkpoint_payload, iter_value):
+    if not bool(save_iter_checkpoints):
+        return None
+    checkpoint_dir = (
+        save_iter_checkpoint_dir
+        if str(save_iter_checkpoint_dir).strip()
+        else os.path.join(out_dir, 'checkpoints')
+    )
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    save_path = os.path.join(checkpoint_dir, f'ckpt_iter{int(iter_value):07d}.pt')
+    torch.save(checkpoint_payload, save_path)
+
+    keep_n = int(save_iter_checkpoint_keep)
+    if keep_n > 0:
+        checkpoint_files = sorted(
+            [
+                filename
+                for filename in os.listdir(checkpoint_dir)
+                if filename.startswith('ckpt_iter') and filename.endswith('.pt')
+            ]
+        )
+        stale_files = checkpoint_files[:-keep_n]
+        for filename in stale_files:
+            stale_path = os.path.join(checkpoint_dir, filename)
+            if stale_path != save_path and os.path.exists(stale_path):
+                os.remove(stale_path)
+    return save_path
 
 
 def _aggregate_top_pairs_to_segments(top_pairs, num_blocks_local, top_k, max_segment_len):
@@ -577,6 +610,9 @@ while True:
                     }
                 print(f"saving checkpoint to {out_dir}")
                 torch.save(checkpoint, os.path.join(out_dir, 'ckpt.pt'))
+                iter_ckpt_path = _save_iteration_checkpoint(checkpoint, iter_num)
+                if iter_ckpt_path is not None:
+                    print(f"saving iteration checkpoint to {iter_ckpt_path}")
     if iter_num == 0 and eval_only:
         break
 

@@ -29,6 +29,12 @@ Block32 random:
 python train.py config/WikiText103/block32/standard/random.py
 ```
 
+Block32 random early-signal scan preset:
+
+```bash
+python train.py config/WikiText103/block32/standard/random_early_scan.py
+```
+
 Block64 random:
 
 ```bash
@@ -91,6 +97,12 @@ python scripts/runner/segment_curriculum_runner.py config/WikiText103/block128/s
 
 ```bash
 python scripts/runner/segment_curriculum_runner.py config/WikiText103/block_permute/block32_segment_curriculum_permute.py
+```
+
+### Permuted block early-signal scan training
+
+```bash
+python train.py config/WikiText103/block_permute/block32_random_permute_early_scan.py
 ```
 
 ## 3. Frozen Checkpoint Evaluation
@@ -231,6 +243,26 @@ python scripts/benchmark/trajectory_statistical_signature_benchmark.py \
 python scripts/analysis/ar_likeness_benchmark.py \
   --ckpt_paths out/out-wikitext103-random-b32/ckpt.pt \
   --out_dir Report/analysis/ar_likeness_benchmark_example
+```
+
+### Early checkpoint signal scan
+
+```bash
+python scripts/runner/early_signal_scan.py \
+  --checkpoint_dir out-wikitext103-random-b32-early-scan/checkpoints \
+  --out_root Report/analysis/early_signal_scan_b32 \
+  --save_all_pair_scores \
+  --steps 500,1000,1500,2000,3000,4000,5000,6000
+```
+
+### Early checkpoint signal scan for permuted block training
+
+```bash
+python scripts/runner/early_signal_scan.py \
+  --checkpoint_dir out-wikitext103-random-b32-permute-block-early-scan/checkpoints \
+  --out_root Report/analysis/early_signal_scan_b32_permute \
+  --save_all_pair_scores \
+  --steps 500,1000,1500,2000,3000,4000,5000,6000
 ```
 
 ## 8. Useful Output Conventions
