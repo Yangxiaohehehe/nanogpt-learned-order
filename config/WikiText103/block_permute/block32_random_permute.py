@@ -6,8 +6,8 @@ eval_iters = 200
 log_interval = 10
 
 wandb_log = True
-wandb_project = 'ao-gpt-experiments-block-order'
-wandb_run_name = 'wikitext103-random-b32-permute-block'
+wandb_project = 'ao-gpt-experiments-block-order-attn-pair'
+wandb_run_name = 'wikitext103-random-b32-permute-block-attn'
 
 dataset = 'wikitext103'
 batch_size = 64

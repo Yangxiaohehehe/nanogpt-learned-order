@@ -40,3 +40,10 @@ prefix_len = 8
 pair_score_k = 2
 tv_weight = 0.3
 benchmark_log_every_batches = 10
+
+pair_mining_mode = "attention_pruned"
+attn_top_k = 4
+attn_num_batches = 24
+attn_batch_size = 32
+attn_mode = "Random"
+attn_symmetrize = "mean"

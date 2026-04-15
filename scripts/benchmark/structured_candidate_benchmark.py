@@ -51,6 +51,45 @@ def parse_args():
     parser.add_argument("--tv_weight", type=float, default=0.3)
     parser.add_argument("--log_every_batches", type=int, default=10)
     parser.add_argument(
+        "--pair_mining_mode",
+        type=str,
+        default="full",
+        choices=["full", "attention_pruned"],
+        help="Use exhaustive pair mining or prune candidates with without-none block attention first.",
+    )
+    parser.add_argument(
+        "--attn_top_k",
+        type=int,
+        default=4,
+        help="Per-block top-k neighbors kept when pair_mining_mode=attention_pruned.",
+    )
+    parser.add_argument(
+        "--attn_num_batches",
+        type=int,
+        default=24,
+        help="Batches used to estimate the without-none attention matrix for pruning.",
+    )
+    parser.add_argument(
+        "--attn_batch_size",
+        type=int,
+        default=32,
+        help="Batch size used to estimate the without-none attention matrix for pruning.",
+    )
+    parser.add_argument(
+        "--attn_mode",
+        type=str,
+        default="Random",
+        choices=["AR", "Random"],
+        help="Model mode used when exporting attention matrices for pruning.",
+    )
+    parser.add_argument(
+        "--attn_symmetrize",
+        type=str,
+        default="mean",
+        choices=["mean", "max"],
+        help="How to symmetrize the original-frame without-none attention graph before top-k pruning.",
+    )
+    parser.add_argument(
         "--save_all_pair_scores",
         action="store_true",
         help="Save the full ranked pair list with scores, not only the top rows in results.json.",
@@ -222,6 +261,135 @@ def compute_window_area_plus_tv(block_losses, window_k, tv_weight):
     return area + float(tv_weight) * total_variation
 
 
+def build_orders_for_mode(model, idx, mode):
+    if mode == "AR":
+        token_orders = model.set_ascending_orders(idx)
+    elif mode == "Random":
+        token_orders = model.sample_random_orders(idx)
+    else:
+        raise ValueError(f"Unsupported attention mining mode: {mode}")
+    block_len = model.block_order_block_len
+    block_orders = token_orders.view(token_orders.size(0), model.num_blocks, block_len)[:, :, 0] // block_len
+    return token_orders, block_orders
+
+
+def extract_attentions_from_outputs(outputs):
+    if not isinstance(outputs, (tuple, list)):
+        raise RuntimeError("Expected model(..., return_attentions=True) to return a tuple/list.")
+    for candidate in reversed(outputs[2:]):
+        if isinstance(candidate, (list, tuple)) and candidate:
+            if all(torch.is_tensor(item) and item.ndim == 4 for item in candidate):
+                return candidate
+    raise RuntimeError("Could not find attention tensors in model outputs.")
+
+
+def reduce_attention_batch(attn_outputs):
+    layers = [layer_att.detach().float() for layer_att in attn_outputs]
+    stacked = torch.stack(layers, dim=0).mean(dim=0)
+    return stacked.mean(dim=1)
+
+
+def aggregate_real_token_attention_to_block(attn_2d, block_len):
+    real_token_attn = attn_2d[1:, 1:]
+    num_real_positions = real_token_attn.size(0)
+    if num_real_positions % block_len != 0:
+        raise ValueError(
+            f"Real-token attention length {num_real_positions} is not divisible by block_len={block_len}."
+        )
+    num_blocks = num_real_positions // block_len
+    return real_token_attn.view(num_blocks, block_len, num_blocks, block_len).mean(dim=(1, 3))
+
+
+def reorder_block_attention_to_original(block_matrix, block_order):
+    if block_order.device != block_matrix.device:
+        block_order = block_order.to(device=block_matrix.device)
+    inverse = invert_permutation(block_order)
+    return block_matrix[inverse][:, inverse]
+
+
+def mine_attention_pruned_candidates(
+    model,
+    tokens,
+    batch_size,
+    num_batches,
+    top_k,
+    mode,
+    token_perm,
+    device,
+    autocast_context,
+    seed,
+    symmetrize,
+):
+    rng = np.random.default_rng(seed)
+    matrix_sum = torch.zeros((model.num_blocks, model.num_blocks), dtype=torch.float64)
+    total_samples = 0
+
+    for _ in range(int(num_batches)):
+        idx = sample_batch(tokens, batch_size, model.config.block_size, rng, device, token_perm=token_perm)
+        token_orders, block_orders = build_orders_for_mode(model, idx, mode)
+        with autocast_context:
+            outputs = model(idx, mode=None, orders=token_orders, return_attentions=True)
+        attn_outputs = extract_attentions_from_outputs(outputs)
+        attn_batch = reduce_attention_batch(attn_outputs)
+        for sample_idx in range(attn_batch.size(0)):
+            block_matrix = aggregate_real_token_attention_to_block(
+                attn_batch[sample_idx],
+                block_len=model.block_order_block_len,
+            )
+            matrix_sum += reorder_block_attention_to_original(
+                block_matrix,
+                block_orders[sample_idx].detach(),
+            ).double().to(device=matrix_sum.device)
+            total_samples += 1
+
+    if total_samples <= 0:
+        raise RuntimeError("Attention-pruned pair mining did not aggregate any samples.")
+
+    attention_matrix = matrix_sum / float(total_samples)
+    if symmetrize == "max":
+        attention_symmetric = torch.maximum(attention_matrix, attention_matrix.t())
+    else:
+        attention_symmetric = 0.5 * (attention_matrix + attention_matrix.t())
+
+    masked = attention_symmetric.clone()
+    masked.fill_diagonal_(float("-inf"))
+    top_k = max(1, min(int(top_k), model.num_blocks - 1))
+
+    neighbor_map = {}
+    undirected_edges = set()
+    for block_idx in range(model.num_blocks):
+        values, indices = torch.topk(masked[block_idx], k=top_k)
+        neighbors = []
+        for weight, neighbor_idx in zip(values.tolist(), indices.tolist()):
+            if not np.isfinite(weight):
+                continue
+            neighbor_idx = int(neighbor_idx)
+            neighbors.append(
+                {
+                    "neighbor": neighbor_idx,
+                    "weight": float(weight),
+                }
+            )
+            if neighbor_idx != block_idx:
+                edge = (min(block_idx, neighbor_idx), max(block_idx, neighbor_idx))
+                undirected_edges.add(edge)
+        neighbor_map[str(int(block_idx))] = neighbors
+
+    pair_list = []
+    for first, second in sorted(undirected_edges):
+        pair_list.append((int(first), int(second)))
+        pair_list.append((int(second), int(first)))
+
+    return {
+        "attention_matrix": attention_matrix,
+        "attention_symmetric": attention_symmetric,
+        "neighbor_map": neighbor_map,
+        "undirected_edges": sorted((int(a), int(b)) for a, b in undirected_edges),
+        "pair_list": pair_list,
+        "num_samples": int(total_samples),
+    }
+
+
 def evaluate_orders_with_metrics(
     model,
     idx,
@@ -295,10 +463,13 @@ def mine_pair_scores(
     autocast_context,
     seed,
     pair_eval_batch_size,
+    pair_list=None,
     token_perm=None,
 ):
     num_blocks = model.num_blocks
-    pair_list = [(i, j) for i in range(num_blocks) for j in range(num_blocks) if i != j]
+    if pair_list is None:
+        pair_list = [(i, j) for i in range(num_blocks) for j in range(num_blocks) if i != j]
+    pair_list = [(int(i), int(j)) for i, j in pair_list if int(i) != int(j)]
     pair_score_sums = torch.zeros(len(pair_list), dtype=torch.float64)
     pair_score_counts = 0
 
@@ -363,11 +534,12 @@ def mine_pair_scores(
             for i in range(num_blocks)
             for j in range(num_blocks)
             if i != j
+            and torch.isfinite(pair_score_matrix[i, j])
         ],
         key=lambda row: (row["score"], row["margin_vs_reverse"]),
         reverse=True,
     )
-    return pair_score_matrix, top_pairs
+    return pair_score_matrix, top_pairs, pair_list
 
 
 def longest_contiguous_run(order):
@@ -618,7 +790,25 @@ def main():
     block_perm = None if permutation_state is None else permutation_state["block_perm"]
 
     early_k = max(2, model.num_blocks // 4)
-    pair_score_matrix, top_pairs = mine_pair_scores(
+    attention_pruning = None
+    pair_list = None
+    if args.pair_mining_mode == "attention_pruned":
+        attention_pruning = mine_attention_pruned_candidates(
+            model,
+            tokens=tokens,
+            batch_size=int(args.attn_batch_size),
+            num_batches=int(args.attn_num_batches),
+            top_k=int(args.attn_top_k),
+            mode=str(args.attn_mode),
+            token_perm=token_perm,
+            device=args.device,
+            autocast_context=autocast_context,
+            seed=int(args.seed) + 17,
+            symmetrize=str(args.attn_symmetrize),
+        )
+        pair_list = attention_pruning["pair_list"]
+
+    pair_score_matrix, top_pairs, mined_pair_list = mine_pair_scores(
         model,
         tokens=tokens,
         batch_size=int(args.batch_size),
@@ -629,6 +819,7 @@ def main():
         autocast_context=autocast_context,
         seed=int(args.seed),
         pair_eval_batch_size=int(args.pair_eval_batch_size),
+        pair_list=pair_list,
         token_perm=token_perm,
     )
     aggregated_segments = aggregate_top_pairs_to_segments(
@@ -804,6 +995,8 @@ def main():
         "pair_mining_batches": args.pair_mining_batches,
         "pair_eval_batch_size": args.pair_eval_batch_size,
         "pair_score_k": args.pair_score_k,
+        "pair_mining_mode": args.pair_mining_mode,
+        "num_directed_pairs_scored": int(len(mined_pair_list)),
         "save_all_pair_scores": bool(args.save_all_pair_scores),
         "candidate_eval_batch_size": args.candidate_eval_batch_size,
         "random_pool_size": args.random_pool_size,
@@ -817,6 +1010,11 @@ def main():
         "seed": args.seed,
         "device": args.device,
         "dtype": args.dtype,
+        "attn_top_k": int(args.attn_top_k),
+        "attn_num_batches": int(args.attn_num_batches),
+        "attn_batch_size": int(args.attn_batch_size),
+        "attn_mode": str(args.attn_mode),
+        "attn_symmetrize": str(args.attn_symmetrize),
         "permute_data": bool(checkpoint.get("config", {}).get("permute_data", False)),
         "permute_mode": checkpoint.get("config", {}).get("permute_mode", ""),
         "permute_seed": checkpoint.get("config", {}).get("permute_seed", None),
@@ -834,10 +1032,31 @@ def main():
         "top_pairs": top_pair_rows,
         "aggregated_segments": aggregated_segments,
     }
+    if attention_pruning is not None:
+        payload["attention_pruning"] = {
+            "num_attention_samples": int(attention_pruning["num_samples"]),
+            "num_undirected_edges": int(len(attention_pruning["undirected_edges"])),
+            "undirected_edges": [
+                {"first": int(first), "second": int(second)}
+                for first, second in attention_pruning["undirected_edges"]
+            ],
+            "top_neighbors_per_block": attention_pruning["neighbor_map"],
+        }
     if bool(args.save_all_pair_scores):
         payload["all_pairs_ranked"] = full_pair_rows
         payload["pair_score_matrix"] = pair_score_matrix.tolist()
         payload["aggregated_segments_internal_frame"] = aggregated_segments_raw
+        if attention_pruning is not None:
+            payload["attention_pruning"]["attention_matrix_original"] = (
+                attention_pruning["attention_matrix"].tolist()
+            )
+            payload["attention_pruning"]["attention_matrix_symmetric"] = (
+                attention_pruning["attention_symmetric"].tolist()
+            )
+            payload["attention_pruning"]["directed_pairs_scored"] = [
+                {"first": int(first), "second": int(second)}
+                for first, second in mined_pair_list
+            ]
     if block_perm is not None:
         payload["permute_map"] = {
             "permute_mode": "block",

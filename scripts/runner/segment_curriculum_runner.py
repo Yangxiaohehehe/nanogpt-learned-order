@@ -272,8 +272,14 @@ def build_benchmark_cmd(
     pair_score_k,
     tv_weight,
     log_every_batches,
+    pair_mining_mode,
+    attn_top_k,
+    attn_num_batches,
+    attn_batch_size,
+    attn_mode,
+    attn_symmetrize,
 ):
-    return [
+    cmd = [
         sys.executable,
         str(SCRIPTS_ROOT / "benchmark" / "structured_candidate_benchmark.py"),
         f"--ckpt_path={ckpt_path}",
@@ -293,6 +299,18 @@ def build_benchmark_cmd(
         f"--tv_weight={float(tv_weight)}",
         f"--log_every_batches={int(log_every_batches)}",
     ]
+    if str(pair_mining_mode) == "attention_pruned":
+        cmd.extend(
+            [
+                f"--pair_mining_mode={pair_mining_mode}",
+                f"--attn_top_k={int(attn_top_k)}",
+                f"--attn_num_batches={int(attn_num_batches)}",
+                f"--attn_batch_size={int(attn_batch_size)}",
+                f"--attn_mode={attn_mode}",
+                f"--attn_symmetrize={attn_symmetrize}",
+            ]
+        )
+    return cmd
 
 
 def parse_args():
@@ -348,6 +366,27 @@ def parse_args():
     parser.add_argument("--pair_score_k", type=int, default=int(config_ns.get("pair_score_k", 2)))
     parser.add_argument("--tv_weight", type=float, default=float(config_ns.get("tv_weight", 0.3)))
     parser.add_argument("--benchmark_log_every_batches", type=int, default=int(config_ns.get("benchmark_log_every_batches", 10)))
+    parser.add_argument(
+        "--pair_mining_mode",
+        type=str,
+        default=str(config_ns.get("pair_mining_mode", "full")),
+        choices=["full", "attention_pruned"],
+    )
+    parser.add_argument("--attn_top_k", type=int, default=int(config_ns.get("attn_top_k", 4)))
+    parser.add_argument("--attn_num_batches", type=int, default=int(config_ns.get("attn_num_batches", 24)))
+    parser.add_argument("--attn_batch_size", type=int, default=int(config_ns.get("attn_batch_size", 32)))
+    parser.add_argument(
+        "--attn_mode",
+        type=str,
+        default=str(config_ns.get("attn_mode", "Random")),
+        choices=["AR", "Random"],
+    )
+    parser.add_argument(
+        "--attn_symmetrize",
+        type=str,
+        default=str(config_ns.get("attn_symmetrize", "mean")),
+        choices=["mean", "max"],
+    )
     args = parser.parse_args(filtered_argv)
     return args
 
@@ -407,6 +446,12 @@ def main():
                 pair_score_k=args.pair_score_k,
                 tv_weight=args.tv_weight,
                 log_every_batches=args.benchmark_log_every_batches,
+                pair_mining_mode=args.pair_mining_mode,
+                attn_top_k=args.attn_top_k,
+                attn_num_batches=args.attn_num_batches,
+                attn_batch_size=args.attn_batch_size,
+                attn_mode=args.attn_mode,
+                attn_symmetrize=args.attn_symmetrize,
             ),
             cwd=repo_dir,
         )
@@ -445,6 +490,12 @@ def main():
         "segment_max_lens": segment_lens,
         "segment_max_units_per_order": int(args.segment_max_units_per_order),
         "segment_top_k_pairs": int(args.segment_top_k_pairs),
+        "pair_mining_mode": str(args.pair_mining_mode),
+        "attn_top_k": int(args.attn_top_k),
+        "attn_num_batches": int(args.attn_num_batches),
+        "attn_batch_size": int(args.attn_batch_size),
+        "attn_mode": str(args.attn_mode),
+        "attn_symmetrize": str(args.attn_symmetrize),
     }
     (benchmark_root / "runner_meta.json").write_text(
         json.dumps(final_payload, ensure_ascii=False, indent=2),
