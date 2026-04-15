@@ -1,13 +1,13 @@
-# AR training for the 64-block setup (block_len=4).
+# WikiText103 seq256 non-permuted AR config for the 64-block setup (block_len=4).
 
-out_dir = 'out-wikitext103-ar-b64'
+out_dir = 'out-wikitext103-seq256-ar-b64'
 eval_interval = 250
 eval_iters = 200
 log_interval = 10
 
 wandb_log = True
 wandb_project = 'ao-gpt-experiments-block-order-attn-64'
-wandb_run_name = 'wikitext103-ar-b64-base'
+wandb_run_name = 'wikitext103-seq256-ar-b64'
 
 dataset = 'wikitext103'
 batch_size = 64

@@ -465,6 +465,7 @@ def estimate_eval_generate_step_block_loss_curves(num_batches_override=None):
     local_num_batches = int(eval_generate_step_batches if num_batches_override is None else num_batches_override)
     ar_block_curves = []
     random_block_curves = []
+    original_l2r_block_curves = [] if permute_data and inverse_block_perm is not None else None
 
     for _ in range(local_num_batches):
         X, _ = get_batch('val')
@@ -479,6 +480,18 @@ def estimate_eval_generate_step_block_loss_curves(num_batches_override=None):
                 mode='Random',
                 return_token_loss=True,
             )
+            if original_l2r_block_curves is not None:
+                original_block_orders = inverse_block_perm.to(device=X.device).unsqueeze(0).expand(X.size(0), -1)
+                original_token_orders = expand_block_orders_to_token_orders(
+                    original_block_orders,
+                    block_len=block_order_block_len,
+                )
+                _, _, original_l2r_token_losses = model(
+                    X,
+                    mode=None,
+                    orders=original_token_orders,
+                    return_token_loss=True,
+                )
         ar_block_losses = token_losses_to_block_losses(
             ar_token_losses,
             block_len=block_order_block_len,
@@ -489,13 +502,22 @@ def estimate_eval_generate_step_block_loss_curves(num_batches_override=None):
         )
         ar_block_curves.append(ar_block_losses.mean(dim=0).float().cpu())
         random_block_curves.append(random_block_losses.mean(dim=0).float().cpu())
+        if original_l2r_block_curves is not None:
+            original_l2r_block_losses = token_losses_to_block_losses(
+                original_l2r_token_losses,
+                block_len=block_order_block_len,
+            )
+            original_l2r_block_curves.append(original_l2r_block_losses.mean(dim=0).float().cpu())
 
     model.train()
     ar_curve = torch.stack(ar_block_curves, dim=0).mean(dim=0).numpy()
     random_curve = torch.stack(random_block_curves, dim=0).mean(dim=0).numpy()
-    return ar_curve, random_curve
+    original_l2r_curve = None
+    if original_l2r_block_curves is not None and len(original_l2r_block_curves) > 0:
+        original_l2r_curve = torch.stack(original_l2r_block_curves, dim=0).mean(dim=0).numpy()
+    return ar_curve, random_curve, original_l2r_curve
 
-def build_generate_step_block_loss_figure(ar_curve, random_curve):
+def build_generate_step_block_loss_figure(ar_curve, random_curve, original_l2r_curve=None):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -503,6 +525,8 @@ def build_generate_step_block_loss_figure(ar_curve, random_curve):
     steps = np.arange(len(ar_curve))
     ax.plot(steps, ar_curve, label='AR mode', linewidth=2.0)
     ax.plot(steps, random_curve, label='Random mode', linewidth=2.0)
+    if original_l2r_curve is not None:
+        ax.plot(steps, original_l2r_curve, label='Original-frame L2R', linewidth=2.0)
     ax.set_title(f'Val Mean Per-Step Block Loss ({eval_generate_step_batches} batches)')
     ax.set_xlabel('Generate / Reveal Block Step')
     ax.set_ylabel('Mean Block Loss')
@@ -575,14 +599,20 @@ while True:
                     if stats_key in latest_policy_train_stats:
                         log_payload[wandb_key] = latest_policy_train_stats[stats_key]
             if eval_generate_step_loss_log and train_stage == 'standard' and aogpt_train_mode == 'Random':
-                ar_curve, random_curve = estimate_eval_generate_step_block_loss_curves()
-                figure = build_generate_step_block_loss_figure(ar_curve, random_curve)
+                ar_curve, random_curve, original_l2r_curve = estimate_eval_generate_step_block_loss_curves()
+                figure = build_generate_step_block_loss_figure(
+                    ar_curve,
+                    random_curve,
+                    original_l2r_curve=original_l2r_curve,
+                )
                 latest_plot_path = save_figure_to_out_dir(
                     figure,
                     eval_generate_step_loss_filename,
                 )
                 log_payload["val/generate_step_block_loss_mean_ar"] = float(np.mean(ar_curve))
                 log_payload["val/generate_step_block_loss_mean_random"] = float(np.mean(random_curve))
+                if original_l2r_curve is not None:
+                    log_payload["val/generate_step_block_loss_mean_original_l2r"] = float(np.mean(original_l2r_curve))
                 log_payload["val/generate_step_block_loss_plot"] = wandb.Image(figure)
                 log_payload["val/generate_step_block_loss_plot_path"] = latest_plot_path
                 print(f"saved generate_step_block_loss_plot to {latest_plot_path}")

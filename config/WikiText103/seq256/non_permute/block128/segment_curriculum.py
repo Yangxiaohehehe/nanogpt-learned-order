@@ -1,21 +1,21 @@
 # Preset config for scripts/runner/segment_curriculum_runner.py
 # Usage:
-#   python scripts/runner/segment_curriculum_runner.py config/WikiText103/block64/standard/segment_curriculum.py
+#   python scripts/runner/segment_curriculum_runner.py config/WikiText103/block128/standard/segment_curriculum.py
 
-config = "config/WikiText103/block64/standard/random.py"
+config = "config/WikiText103/block128/standard/random.py"
 
-train_out_dir = "out-wikitext103-random-b64-curriculum-attn"
-benchmark_root = "Report/curriculum/segment_curriculum_b64-attn"
+train_out_dir = "out-wikitext103-random-b128-curriculum-attn"
+benchmark_root = "Report/curriculum/segment_curriculum_b128_big"
 
-# block64 has 64 * 63 ordered pairs, so we keep pair mining selective while
+# block128 has 128 * 127 ordered pairs, so we keep pair mining selective while
 # making the curriculum itself stronger across more stages.
-warmup_iters = 7000
-stage_iters = 7000
-num_curriculum_stages = 3
+warmup_iters = 6000
+stage_iters = 6000
+num_curriculum_stages = 4
 
-segment_guided_ratios = "0.3,0.5,0.7"
-segment_max_lens = "4,6,8"
-segment_max_units_per_order = 3
+segment_guided_ratios = "0.3,0.5,0.7,0.8"
+segment_max_lens = "4,8,16,32"
+segment_max_units_per_order = 4
 segment_top_k_pairs = 48
 
 # Benchmark settings
@@ -24,7 +24,7 @@ segment_top_k_pairs = 48
 benchmark_batch_size = 64
 benchmark_num_batches = 200
 pair_mining_batches = 16
-pair_eval_batch_size = 8
+pair_eval_batch_size = 50
 candidate_eval_batch_size = 64
 
 random_pool_size = 64
@@ -38,7 +38,7 @@ benchmark_log_every_batches = 10
 
 pair_mining_mode = "attention_pruned"
 attn_top_k = 10
-attn_num_batches = 24
-attn_batch_size = 32
+attn_num_batches = 50
+attn_batch_size = 64
 attn_mode = "Random"
 attn_symmetrize = "mean"

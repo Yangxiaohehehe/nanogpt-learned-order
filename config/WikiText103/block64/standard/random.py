@@ -6,7 +6,7 @@ eval_iters = 200
 log_interval = 10
 
 wandb_log = True
-wandb_project = 'ao-gpt-experiments-block-order'
+wandb_project = 'ao-gpt-experiments-block-order-attn-64'
 wandb_run_name = 'wikitext103-random-b64'
 
 dataset = 'wikitext103'

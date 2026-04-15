@@ -1,24 +1,27 @@
 # WikiText103 Config Layout
 
-This directory is organized by block granularity and stage:
+The active layout is now organized first by sequence length, then by whether
+the input data is permuted, and finally by the number of reveal blocks:
 
-- `block16/`: 16 blocks total, `block_order_block_len = 16`
-- `block32/`: 32 blocks total, `block_order_block_len = 8`
-- `block64/`: 64 blocks total, `block_order_block_len = 4`
-- `legacy/`: older exploratory configs that do not fit the main block-order pipeline
+- `seq256/non_permute/block16/`
+- `seq256/non_permute/block32/`
+- `seq256/non_permute/block64/`
+- `seq256/non_permute/block128/`
+- `seq256/permute/block16/`
+- `seq256/permute/block32/`
+- ...
+- `seq512/non_permute/block16/`
+- `seq512/permute/block128/`
 
-Inside each block directory:
+Inside each block directory, the standard entry points are:
 
-- `standard/`: stage-1 backbone training configs
+- `random.py`
+- `ar.py`
+- `segment_curriculum.py`
 
-Recommended direct entry points:
+These are all standalone config files, so each one can be customized
+independently for block-specific or run-specific settings such as W&B names.
 
-- 16 blocks:
-  - `config/WikiText103/block16/standard/random.py`
-  - `config/WikiText103/block16/standard/ar.py`
-- 32 blocks:
-  - `config/WikiText103/block32/standard/random.py`
-  - `config/WikiText103/block32/standard/ar.py`
-- 64 blocks:
-  - `config/WikiText103/block64/standard/random.py`
-  - `config/WikiText103/block64/standard/ar.py`
+Legacy paths such as `block16/standard/`, `block32/standard/`, and
+`block_permute/` are kept for backward compatibility with existing commands
+and historical reports.

@@ -1,13 +1,13 @@
-# AR training for the 64-block setup (block_len=4).
+# WikiText103 seq256 non-permuted AR config for the 32-block setup (block_len=8).
 
-out_dir = 'out-wikitext103-ar-b64'
+out_dir = 'out-wikitext103-seq256-ar-b32'
 eval_interval = 250
 eval_iters = 200
 log_interval = 10
 
 wandb_log = True
-wandb_project = 'ao-gpt-experiments-block-order-attn-64'
-wandb_run_name = 'wikitext103-ar-b64-base'
+wandb_project = 'ao-gpt-experiments-block-order'
+wandb_run_name = 'wikitext103-seq256-ar-b32'
 
 dataset = 'wikitext103'
 batch_size = 64
@@ -22,13 +22,13 @@ aogpt_train_mode = 'AR'
 main_eval_mode = 'AR'
 generalization_eval_mode = ''
 n_layer = 3
-n_head = 8
-n_embd = 256
+n_head = 4
+n_embd = 128
 dropout = 0
 
-block_order_block_len = 4
-policy_prefix_k = 16
-utility_horizon = 16
+block_order_block_len = 8
+policy_prefix_k = 8
+utility_horizon = 8
 utility_alpha = 1.0
 utility_beta = 1.0
 baseline_momentum = 0.95
