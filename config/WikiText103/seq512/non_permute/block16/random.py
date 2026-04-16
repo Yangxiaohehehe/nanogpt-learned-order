@@ -22,8 +22,8 @@ aogpt_train_mode = 'Random'
 main_eval_mode = 'Random'
 generalization_eval_mode = ''
 n_layer = 3
-n_head = 4
-n_embd = 128
+n_head = 8
+n_embd = 256
 dropout = 0
 
 block_order_block_len = 32
