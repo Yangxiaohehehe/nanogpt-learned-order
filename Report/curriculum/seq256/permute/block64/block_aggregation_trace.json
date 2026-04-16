@@ -1,13 +1,7 @@
 {
-  "num_stages_found": 2,
+  "num_stages_found": 3,
   "final_stage_linearized_order": [
-    44,
-    0,
-    56,
-    51,
-    20,
-    40,
-    24,
+    1,
     63,
     35,
     47,
@@ -15,6 +9,14 @@
     5,
     12,
     50,
+    6,
+    44,
+    0,
+    56,
+    51,
+    20,
+    40,
+    24,
     42,
     19,
     22,
@@ -29,24 +31,19 @@
     2,
     39,
     10,
-    27,
-    41,
-    18,
     46,
     14,
     49,
+    61,
     4,
     29,
     33,
     54,
-    37,
-    28,
-    52,
-    3,
+    41,
+    18,
     53,
     60,
-    1,
-    6,
+    3,
     8,
     11,
     15,
@@ -54,38 +51,28 @@
     23,
     25,
     26,
+    27,
+    28,
     30,
     31,
     32,
     34,
+    37,
     38,
     43,
     45,
     48,
+    52,
     57,
-    61,
     62
   ],
   "final_stage_units": [
     {
       "unit_type": "segment",
       "segment_rank": 1,
-      "segment_length": 7,
+      "segment_length": 8,
       "blocks": [
-        44,
-        0,
-        56,
-        51,
-        20,
-        40,
-        24
-      ]
-    },
-    {
-      "unit_type": "segment",
-      "segment_rank": 2,
-      "segment_length": 7,
-      "blocks": [
+        1,
         63,
         35,
         47,
@@ -93,6 +80,21 @@
         5,
         12,
         50
+      ]
+    },
+    {
+      "unit_type": "segment",
+      "segment_rank": 2,
+      "segment_length": 8,
+      "blocks": [
+        6,
+        44,
+        0,
+        56,
+        51,
+        20,
+        40,
+        24
       ]
     },
     {
@@ -135,16 +137,6 @@
       "segment_rank": 6,
       "segment_length": 3,
       "blocks": [
-        27,
-        41,
-        18
-      ]
-    },
-    {
-      "unit_type": "segment",
-      "segment_rank": 7,
-      "segment_length": 3,
-      "blocks": [
         46,
         14,
         49
@@ -152,16 +144,17 @@
     },
     {
       "unit_type": "segment",
-      "segment_rank": 8,
-      "segment_length": 2,
+      "segment_rank": 7,
+      "segment_length": 3,
       "blocks": [
+        61,
         4,
         29
       ]
     },
     {
       "unit_type": "segment",
-      "segment_rank": 9,
+      "segment_rank": 8,
       "segment_length": 2,
       "blocks": [
         33,
@@ -170,25 +163,16 @@
     },
     {
       "unit_type": "segment",
+      "segment_rank": 9,
+      "segment_length": 2,
+      "blocks": [
+        41,
+        18
+      ]
+    },
+    {
+      "unit_type": "segment",
       "segment_rank": 10,
-      "segment_length": 2,
-      "blocks": [
-        37,
-        28
-      ]
-    },
-    {
-      "unit_type": "segment",
-      "segment_rank": 11,
-      "segment_length": 2,
-      "blocks": [
-        52,
-        3
-      ]
-    },
-    {
-      "unit_type": "segment",
-      "segment_rank": 12,
       "segment_length": 2,
       "blocks": [
         53,
@@ -200,15 +184,7 @@
       "segment_rank": null,
       "segment_length": 1,
       "blocks": [
-        1
-      ]
-    },
-    {
-      "unit_type": "singleton",
-      "segment_rank": null,
-      "segment_length": 1,
-      "blocks": [
-        6
+        3
       ]
     },
     {
@@ -272,6 +248,22 @@
       "segment_rank": null,
       "segment_length": 1,
       "blocks": [
+        27
+      ]
+    },
+    {
+      "unit_type": "singleton",
+      "segment_rank": null,
+      "segment_length": 1,
+      "blocks": [
+        28
+      ]
+    },
+    {
+      "unit_type": "singleton",
+      "segment_rank": null,
+      "segment_length": 1,
+      "blocks": [
         30
       ]
     },
@@ -297,6 +289,14 @@
       "segment_length": 1,
       "blocks": [
         34
+      ]
+    },
+    {
+      "unit_type": "singleton",
+      "segment_rank": null,
+      "segment_length": 1,
+      "blocks": [
+        37
       ]
     },
     {
@@ -336,7 +336,7 @@
       "segment_rank": null,
       "segment_length": 1,
       "blocks": [
-        57
+        52
       ]
     },
     {
@@ -344,7 +344,7 @@
       "segment_rank": null,
       "segment_length": 1,
       "blocks": [
-        61
+        57
       ]
     },
     {
@@ -377,9 +377,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 2,
-          "segment_length": 7,
+          "position_in_segment": 3,
+          "segment_length": 8,
           "segment_blocks": [
+            6,
+            44,
+            0,
+            56,
+            51,
+            20,
+            40,
+            24
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 3,
+          "segment_length": 8,
+          "segment_blocks": [
+            6,
             44,
             0,
             56,
@@ -391,12 +409,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 2,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 3,
+        "segment_length": 8,
         "segment_blocks": [
+          6,
           44,
           0,
           56,
@@ -412,14 +431,12 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
           "position_in_segment": 1,
-          "segment_length": 3,
+          "segment_length": 1,
           "segment_blocks": [
-            1,
-            63,
-            35
+            1
           ]
         },
         {
@@ -431,16 +448,40 @@
           "segment_blocks": [
             1
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 1,
+          "segment_length": 8,
+          "segment_blocks": [
+            1,
+            63,
+            35,
+            47,
+            36,
+            5,
+            12,
+            50
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "singleton",
-        "segment_rank": null,
+        "stage": 3,
+        "unit_type": "segment",
+        "segment_rank": 1,
         "position_in_segment": 1,
-        "segment_length": 1,
+        "segment_length": 8,
         "segment_blocks": [
-          1
+          1,
+          63,
+          35,
+          47,
+          36,
+          5,
+          12,
+          50
         ]
       }
     },
@@ -472,10 +513,23 @@
             39,
             10
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 2,
+          "segment_length": 4,
+          "segment_blocks": [
+            17,
+            2,
+            39,
+            10
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 5,
         "position_in_segment": 2,
@@ -494,7 +548,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 15,
+          "segment_rank": 13,
           "position_in_segment": 2,
           "segment_length": 2,
           "segment_blocks": [
@@ -504,24 +558,32 @@
         },
         {
           "stage": 2,
-          "unit_type": "segment",
-          "segment_rank": 11,
-          "position_in_segment": 2,
-          "segment_length": 2,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
           "segment_blocks": [
-            52,
+            3
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
             3
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 11,
-        "position_in_segment": 2,
-        "segment_length": 2,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
+        "position_in_segment": 1,
+        "segment_length": 1,
         "segment_blocks": [
-          52,
           3
         ]
       }
@@ -544,21 +606,35 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 8,
-          "position_in_segment": 1,
-          "segment_length": 2,
+          "position_in_segment": 2,
+          "segment_length": 3,
           "segment_blocks": [
+            61,
+            4,
+            29
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 7,
+          "position_in_segment": 2,
+          "segment_length": 3,
+          "segment_blocks": [
+            61,
             4,
             29
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 8,
-        "position_in_segment": 1,
-        "segment_length": 2,
+        "segment_rank": 7,
+        "position_in_segment": 2,
+        "segment_length": 3,
         "segment_blocks": [
+          61,
           4,
           29
         ]
@@ -570,22 +646,39 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 8,
+          "segment_rank": 3,
           "position_in_segment": 3,
-          "segment_length": 3,
+          "segment_length": 4,
           "segment_blocks": [
             47,
             36,
-            5
+            5,
+            12
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 5,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            63,
+            35,
+            47,
+            36,
+            5,
+            12
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 6,
+          "segment_length": 8,
+          "segment_blocks": [
+            1,
             63,
             35,
             47,
@@ -597,12 +690,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 5,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 6,
+        "segment_length": 8,
         "segment_blocks": [
+          1,
           63,
           35,
           47,
@@ -628,23 +722,54 @@
         },
         {
           "stage": 2,
-          "unit_type": "singleton",
-          "segment_rank": null,
+          "unit_type": "segment",
+          "segment_rank": 1,
           "position_in_segment": 1,
-          "segment_length": 1,
+          "segment_length": 8,
           "segment_blocks": [
-            6
+            6,
+            44,
+            0,
+            56,
+            51,
+            20,
+            40,
+            24
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 1,
+          "segment_length": 8,
+          "segment_blocks": [
+            6,
+            44,
+            0,
+            56,
+            51,
+            20,
+            40,
+            24
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "singleton",
-        "segment_rank": null,
+        "stage": 3,
+        "unit_type": "segment",
+        "segment_rank": 2,
         "position_in_segment": 1,
-        "segment_length": 1,
+        "segment_length": 8,
         "segment_blocks": [
-          6
+          6,
+          44,
+          0,
+          56,
+          51,
+          20,
+          40,
+          24
         ]
       }
     },
@@ -675,10 +800,23 @@
             59,
             58
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 1,
+          "segment_length": 4,
+          "segment_blocks": [
+            7,
+            13,
+            59,
+            58
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 4,
         "position_in_segment": 1,
@@ -713,10 +851,20 @@
           "segment_blocks": [
             8
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            8
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -732,7 +880,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 9,
+          "segment_rank": 8,
           "position_in_segment": 3,
           "segment_length": 3,
           "segment_blocks": [
@@ -743,6 +891,21 @@
         },
         {
           "stage": 2,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 6,
+          "segment_length": 6,
+          "segment_blocks": [
+            42,
+            19,
+            22,
+            55,
+            16,
+            9
+          ]
+        },
+        {
+          "stage": 3,
           "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 6,
@@ -758,7 +921,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 6,
@@ -801,10 +964,23 @@
             39,
             10
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 4,
+          "segment_length": 4,
+          "segment_blocks": [
+            17,
+            2,
+            39,
+            10
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 5,
         "position_in_segment": 4,
@@ -839,10 +1015,20 @@
           "segment_blocks": [
             11
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            11
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -858,21 +1044,39 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 11,
-          "position_in_segment": 1,
-          "segment_length": 2,
+          "segment_rank": 3,
+          "position_in_segment": 4,
+          "segment_length": 4,
           "segment_blocks": [
-            12,
-            50
+            47,
+            36,
+            5,
+            12
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 6,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            63,
+            35,
+            47,
+            36,
+            5,
+            12
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 7,
+          "segment_length": 8,
+          "segment_blocks": [
+            1,
             63,
             35,
             47,
@@ -884,12 +1088,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 6,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 7,
+        "segment_length": 8,
         "segment_blocks": [
+          1,
           63,
           35,
           47,
@@ -927,10 +1132,23 @@
             59,
             58
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 2,
+          "segment_length": 4,
+          "segment_blocks": [
+            7,
+            13,
+            59,
+            58
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 4,
         "position_in_segment": 2,
@@ -969,12 +1187,24 @@
             14,
             49
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 6,
+          "position_in_segment": 2,
+          "segment_length": 3,
+          "segment_blocks": [
+            46,
+            14,
+            49
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 7,
+        "segment_rank": 6,
         "position_in_segment": 2,
         "segment_length": 3,
         "segment_blocks": [
@@ -1006,10 +1236,20 @@
           "segment_blocks": [
             15
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            15
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1025,7 +1265,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 9,
+          "segment_rank": 8,
           "position_in_segment": 2,
           "segment_length": 3,
           "segment_blocks": [
@@ -1036,6 +1276,21 @@
         },
         {
           "stage": 2,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 5,
+          "segment_length": 6,
+          "segment_blocks": [
+            42,
+            19,
+            22,
+            55,
+            16,
+            9
+          ]
+        },
+        {
+          "stage": 3,
           "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 5,
@@ -1051,7 +1306,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 5,
@@ -1094,10 +1349,23 @@
             39,
             10
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 1,
+          "segment_length": 4,
+          "segment_blocks": [
+            17,
+            2,
+            39,
+            10
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 5,
         "position_in_segment": 1,
@@ -1116,11 +1384,10 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 5,
-          "position_in_segment": 3,
-          "segment_length": 3,
+          "segment_rank": 12,
+          "position_in_segment": 2,
+          "segment_length": 2,
           "segment_blocks": [
-            27,
             41,
             18
           ]
@@ -1136,16 +1403,26 @@
             41,
             18
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 9,
+          "position_in_segment": 2,
+          "segment_length": 2,
+          "segment_blocks": [
+            41,
+            18
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 6,
-        "position_in_segment": 3,
-        "segment_length": 3,
+        "segment_rank": 9,
+        "position_in_segment": 2,
+        "segment_length": 2,
         "segment_blocks": [
-          27,
           41,
           18
         ]
@@ -1169,6 +1446,21 @@
         {
           "stage": 2,
           "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 2,
+          "segment_length": 6,
+          "segment_blocks": [
+            42,
+            19,
+            22,
+            55,
+            16,
+            9
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 2,
           "segment_length": 6,
@@ -1183,7 +1475,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 2,
@@ -1218,9 +1510,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 5,
-          "segment_length": 7,
+          "position_in_segment": 6,
+          "segment_length": 8,
           "segment_blocks": [
+            6,
+            44,
+            0,
+            56,
+            51,
+            20,
+            40,
+            24
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 6,
+          "segment_length": 8,
+          "segment_blocks": [
+            6,
             44,
             0,
             56,
@@ -1232,12 +1542,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 5,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 6,
+        "segment_length": 8,
         "segment_blocks": [
+          6,
           44,
           0,
           56,
@@ -1270,10 +1581,20 @@
           "segment_blocks": [
             21
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            21
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1301,6 +1622,21 @@
         {
           "stage": 2,
           "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 3,
+          "segment_length": 6,
+          "segment_blocks": [
+            42,
+            19,
+            22,
+            55,
+            16,
+            9
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 3,
           "segment_length": 6,
@@ -1315,7 +1651,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 3,
@@ -1352,10 +1688,20 @@
           "segment_blocks": [
             23
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            23
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1370,12 +1716,11 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 14,
-          "position_in_segment": 2,
-          "segment_length": 2,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
           "segment_blocks": [
-            40,
             24
           ]
         },
@@ -1383,9 +1728,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 7,
-          "segment_length": 7,
+          "position_in_segment": 8,
+          "segment_length": 8,
           "segment_blocks": [
+            6,
+            44,
+            0,
+            56,
+            51,
+            20,
+            40,
+            24
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 8,
+          "segment_length": 8,
+          "segment_blocks": [
+            6,
             44,
             0,
             56,
@@ -1397,12 +1760,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 7,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 8,
+        "segment_length": 8,
         "segment_blocks": [
+          6,
           44,
           0,
           56,
@@ -1418,11 +1782,13 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "singleton",
-          "segment_rank": null,
-          "position_in_segment": 1,
-          "segment_length": 1,
+          "unit_type": "segment",
+          "segment_rank": 9,
+          "position_in_segment": 3,
+          "segment_length": 3,
           "segment_blocks": [
+            58,
+            26,
             25
           ]
         },
@@ -1435,10 +1801,20 @@
           "segment_blocks": [
             25
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            25
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1453,12 +1829,14 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "singleton",
-          "segment_rank": null,
-          "position_in_segment": 1,
-          "segment_length": 1,
+          "unit_type": "segment",
+          "segment_rank": 9,
+          "position_in_segment": 2,
+          "segment_length": 3,
           "segment_blocks": [
-            26
+            58,
+            26,
+            25
           ]
         },
         {
@@ -1470,10 +1848,20 @@
           "segment_blocks": [
             26
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            26
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1488,14 +1876,12 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 5,
+          "unit_type": "singleton",
+          "segment_rank": null,
           "position_in_segment": 1,
-          "segment_length": 3,
+          "segment_length": 1,
           "segment_blocks": [
-            27,
-            41,
-            18
+            27
           ]
         },
         {
@@ -1509,18 +1895,26 @@
             41,
             18
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            27
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 6,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
         "position_in_segment": 1,
-        "segment_length": 3,
+        "segment_length": 1,
         "segment_blocks": [
-          27,
-          41,
-          18
+          27
         ]
       }
     },
@@ -1530,12 +1924,13 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 13,
+          "segment_rank": 5,
           "position_in_segment": 2,
-          "segment_length": 2,
+          "segment_length": 3,
           "segment_blocks": [
             37,
-            28
+            28,
+            43
           ]
         },
         {
@@ -1548,16 +1943,25 @@
             37,
             28
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            28
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 10,
-        "position_in_segment": 2,
-        "segment_length": 2,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
+        "position_in_segment": 1,
+        "segment_length": 1,
         "segment_blocks": [
-          37,
           28
         ]
       }
@@ -1580,21 +1984,35 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 8,
-          "position_in_segment": 2,
-          "segment_length": 2,
+          "position_in_segment": 3,
+          "segment_length": 3,
           "segment_blocks": [
+            61,
+            4,
+            29
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 7,
+          "position_in_segment": 3,
+          "segment_length": 3,
+          "segment_blocks": [
+            61,
             4,
             29
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 8,
-        "position_in_segment": 2,
-        "segment_length": 2,
+        "segment_rank": 7,
+        "position_in_segment": 3,
+        "segment_length": 3,
         "segment_blocks": [
+          61,
           4,
           29
         ]
@@ -1622,10 +2040,20 @@
           "segment_blocks": [
             30
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            30
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1657,10 +2085,20 @@
           "segment_blocks": [
             31
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            31
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1692,10 +2130,20 @@
           "segment_blocks": [
             32
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            32
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1711,7 +2159,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 12,
+          "segment_rank": 11,
           "position_in_segment": 1,
           "segment_length": 2,
           "segment_blocks": [
@@ -1729,12 +2177,23 @@
             33,
             54
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 8,
+          "position_in_segment": 1,
+          "segment_length": 2,
+          "segment_blocks": [
+            33,
+            54
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 9,
+        "segment_rank": 8,
         "position_in_segment": 1,
         "segment_length": 2,
         "segment_blocks": [
@@ -1765,10 +2224,20 @@
           "segment_blocks": [
             34
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            34
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1784,11 +2253,10 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 3,
-          "position_in_segment": 3,
-          "segment_length": 3,
+          "segment_rank": 15,
+          "position_in_segment": 2,
+          "segment_length": 2,
           "segment_blocks": [
-            1,
             63,
             35
           ]
@@ -1796,10 +2264,26 @@
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 2,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            63,
+            35,
+            47,
+            36,
+            5,
+            12
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 3,
+          "segment_length": 8,
+          "segment_blocks": [
+            1,
             63,
             35,
             47,
@@ -1811,12 +2295,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 2,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 3,
+        "segment_length": 8,
         "segment_blocks": [
+          1,
           63,
           35,
           47,
@@ -1833,22 +2318,39 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 8,
+          "segment_rank": 3,
           "position_in_segment": 2,
-          "segment_length": 3,
+          "segment_length": 4,
           "segment_blocks": [
             47,
             36,
-            5
+            5,
+            12
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 4,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            63,
+            35,
+            47,
+            36,
+            5,
+            12
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 5,
+          "segment_length": 8,
+          "segment_blocks": [
+            1,
             63,
             35,
             47,
@@ -1860,12 +2362,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 4,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 5,
+        "segment_length": 8,
         "segment_blocks": [
+          1,
           63,
           35,
           47,
@@ -1882,12 +2385,13 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 13,
+          "segment_rank": 5,
           "position_in_segment": 1,
-          "segment_length": 2,
+          "segment_length": 3,
           "segment_blocks": [
             37,
-            28
+            28,
+            43
           ]
         },
         {
@@ -1900,17 +2404,26 @@
             37,
             28
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            37
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 10,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
         "position_in_segment": 1,
-        "segment_length": 2,
+        "segment_length": 1,
         "segment_blocks": [
-          37,
-          28
+          37
         ]
       }
     },
@@ -1936,10 +2449,20 @@
           "segment_blocks": [
             38
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            38
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -1977,10 +2500,23 @@
             39,
             10
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 3,
+          "segment_length": 4,
+          "segment_blocks": [
+            17,
+            2,
+            39,
+            10
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 5,
         "position_in_segment": 3,
@@ -1998,22 +2534,39 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 14,
+          "unit_type": "singleton",
+          "segment_rank": null,
           "position_in_segment": 1,
-          "segment_length": 2,
+          "segment_length": 1,
           "segment_blocks": [
-            40,
-            24
+            40
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 6,
-          "segment_length": 7,
+          "position_in_segment": 7,
+          "segment_length": 8,
           "segment_blocks": [
+            6,
+            44,
+            0,
+            56,
+            51,
+            20,
+            40,
+            24
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 7,
+          "segment_length": 8,
+          "segment_blocks": [
+            6,
             44,
             0,
             56,
@@ -2025,12 +2578,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 6,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 7,
+        "segment_length": 8,
         "segment_blocks": [
+          6,
           44,
           0,
           56,
@@ -2047,11 +2601,10 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 5,
-          "position_in_segment": 2,
-          "segment_length": 3,
+          "segment_rank": 12,
+          "position_in_segment": 1,
+          "segment_length": 2,
           "segment_blocks": [
-            27,
             41,
             18
           ]
@@ -2067,16 +2620,26 @@
             41,
             18
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 9,
+          "position_in_segment": 1,
+          "segment_length": 2,
+          "segment_blocks": [
+            41,
+            18
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 6,
-        "position_in_segment": 2,
-        "segment_length": 3,
+        "segment_rank": 9,
+        "position_in_segment": 1,
+        "segment_length": 2,
         "segment_blocks": [
-          27,
           41,
           18
         ]
@@ -2100,6 +2663,21 @@
         {
           "stage": 2,
           "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 1,
+          "segment_length": 6,
+          "segment_blocks": [
+            42,
+            19,
+            22,
+            55,
+            16,
+            9
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 1,
           "segment_length": 6,
@@ -2114,7 +2692,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 1,
@@ -2134,11 +2712,13 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "singleton",
-          "segment_rank": null,
-          "position_in_segment": 1,
-          "segment_length": 1,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 3,
+          "segment_length": 3,
           "segment_blocks": [
+            37,
+            28,
             43
           ]
         },
@@ -2151,10 +2731,20 @@
           "segment_blocks": [
             43
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            43
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -2181,9 +2771,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 1,
-          "segment_length": 7,
+          "position_in_segment": 2,
+          "segment_length": 8,
           "segment_blocks": [
+            6,
+            44,
+            0,
+            56,
+            51,
+            20,
+            40,
+            24
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 2,
+          "segment_length": 8,
+          "segment_blocks": [
+            6,
             44,
             0,
             56,
@@ -2195,12 +2803,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 1,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 2,
+        "segment_length": 8,
         "segment_blocks": [
+          6,
           44,
           0,
           56,
@@ -2233,10 +2842,20 @@
           "segment_blocks": [
             45
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            45
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -2272,12 +2891,24 @@
             14,
             49
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 6,
+          "position_in_segment": 1,
+          "segment_length": 3,
+          "segment_blocks": [
+            46,
+            14,
+            49
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 7,
+        "segment_rank": 6,
         "position_in_segment": 1,
         "segment_length": 3,
         "segment_blocks": [
@@ -2293,22 +2924,39 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 8,
+          "segment_rank": 3,
           "position_in_segment": 1,
-          "segment_length": 3,
+          "segment_length": 4,
           "segment_blocks": [
             47,
             36,
-            5
+            5,
+            12
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 3,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            63,
+            35,
+            47,
+            36,
+            5,
+            12
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 4,
+          "segment_length": 8,
+          "segment_blocks": [
+            1,
             63,
             35,
             47,
@@ -2320,12 +2968,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 3,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 4,
+        "segment_length": 8,
         "segment_blocks": [
+          1,
           63,
           35,
           47,
@@ -2358,10 +3007,20 @@
           "segment_blocks": [
             48
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            48
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -2397,12 +3056,24 @@
             14,
             49
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 6,
+          "position_in_segment": 3,
+          "segment_length": 3,
+          "segment_blocks": [
+            46,
+            14,
+            49
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 7,
+        "segment_rank": 6,
         "position_in_segment": 3,
         "segment_length": 3,
         "segment_blocks": [
@@ -2417,22 +3088,32 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 11,
-          "position_in_segment": 2,
-          "segment_length": 2,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
           "segment_blocks": [
-            12,
             50
           ]
         },
         {
           "stage": 2,
-          "unit_type": "segment",
-          "segment_rank": 2,
-          "position_in_segment": 7,
-          "segment_length": 7,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
           "segment_blocks": [
+            50
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 8,
+          "segment_length": 8,
+          "segment_blocks": [
+            1,
             63,
             35,
             47,
@@ -2444,12 +3125,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 7,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 8,
+        "segment_length": 8,
         "segment_blocks": [
+          1,
           63,
           35,
           47,
@@ -2480,9 +3162,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 4,
-          "segment_length": 7,
+          "position_in_segment": 5,
+          "segment_length": 8,
           "segment_blocks": [
+            6,
+            44,
+            0,
+            56,
+            51,
+            20,
+            40,
+            24
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 5,
+          "segment_length": 8,
+          "segment_blocks": [
+            6,
             44,
             0,
             56,
@@ -2494,12 +3194,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 4,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 5,
+        "segment_length": 8,
         "segment_blocks": [
+          6,
           44,
           0,
           56,
@@ -2516,7 +3217,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 15,
+          "segment_rank": 13,
           "position_in_segment": 1,
           "segment_length": 2,
           "segment_blocks": [
@@ -2526,25 +3227,33 @@
         },
         {
           "stage": 2,
-          "unit_type": "segment",
-          "segment_rank": 11,
+          "unit_type": "singleton",
+          "segment_rank": null,
           "position_in_segment": 1,
-          "segment_length": 2,
+          "segment_length": 1,
           "segment_blocks": [
-            52,
-            3
+            52
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            52
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 11,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
         "position_in_segment": 1,
-        "segment_length": 2,
+        "segment_length": 1,
         "segment_blocks": [
-          52,
-          3
+          52
         ]
       }
     },
@@ -2554,7 +3263,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 16,
+          "segment_rank": 14,
           "position_in_segment": 1,
           "segment_length": 2,
           "segment_blocks": [
@@ -2565,7 +3274,18 @@
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 12,
+          "segment_rank": 11,
+          "position_in_segment": 1,
+          "segment_length": 2,
+          "segment_blocks": [
+            53,
+            60
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 10,
           "position_in_segment": 1,
           "segment_length": 2,
           "segment_blocks": [
@@ -2575,9 +3295,9 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 12,
+        "segment_rank": 10,
         "position_in_segment": 1,
         "segment_length": 2,
         "segment_blocks": [
@@ -2592,7 +3312,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 12,
+          "segment_rank": 11,
           "position_in_segment": 2,
           "segment_length": 2,
           "segment_blocks": [
@@ -2610,12 +3330,23 @@
             33,
             54
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 8,
+          "position_in_segment": 2,
+          "segment_length": 2,
+          "segment_blocks": [
+            33,
+            54
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 9,
+        "segment_rank": 8,
         "position_in_segment": 2,
         "segment_length": 2,
         "segment_blocks": [
@@ -2630,7 +3361,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 9,
+          "segment_rank": 8,
           "position_in_segment": 1,
           "segment_length": 3,
           "segment_blocks": [
@@ -2641,6 +3372,21 @@
         },
         {
           "stage": 2,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 4,
+          "segment_length": 6,
+          "segment_blocks": [
+            42,
+            19,
+            22,
+            55,
+            16,
+            9
+          ]
+        },
+        {
+          "stage": 3,
           "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 4,
@@ -2656,7 +3402,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 4,
@@ -2691,9 +3437,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 3,
-          "segment_length": 7,
+          "position_in_segment": 4,
+          "segment_length": 8,
           "segment_blocks": [
+            6,
+            44,
+            0,
+            56,
+            51,
+            20,
+            40,
+            24
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 4,
+          "segment_length": 8,
+          "segment_blocks": [
+            6,
             44,
             0,
             56,
@@ -2705,12 +3469,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 3,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 4,
+        "segment_length": 8,
         "segment_blocks": [
+          6,
           44,
           0,
           56,
@@ -2743,10 +3508,20 @@
           "segment_blocks": [
             57
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            57
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -2761,12 +3536,14 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "singleton",
-          "segment_rank": null,
+          "unit_type": "segment",
+          "segment_rank": 9,
           "position_in_segment": 1,
-          "segment_length": 1,
+          "segment_length": 3,
           "segment_blocks": [
-            58
+            58,
+            26,
+            25
           ]
         },
         {
@@ -2781,10 +3558,23 @@
             59,
             58
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 4,
+          "segment_length": 4,
+          "segment_blocks": [
+            7,
+            13,
+            59,
+            58
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 4,
         "position_in_segment": 4,
@@ -2824,10 +3614,23 @@
             59,
             58
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 3,
+          "segment_length": 4,
+          "segment_blocks": [
+            7,
+            13,
+            59,
+            58
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 4,
         "position_in_segment": 3,
@@ -2846,7 +3649,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 16,
+          "segment_rank": 14,
           "position_in_segment": 2,
           "segment_length": 2,
           "segment_blocks": [
@@ -2857,7 +3660,18 @@
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 12,
+          "segment_rank": 11,
+          "position_in_segment": 2,
+          "segment_length": 2,
+          "segment_blocks": [
+            53,
+            60
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 10,
           "position_in_segment": 2,
           "segment_length": 2,
           "segment_blocks": [
@@ -2867,9 +3681,9 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 12,
+        "segment_rank": 10,
         "position_in_segment": 2,
         "segment_length": 2,
         "segment_blocks": [
@@ -2893,23 +3707,39 @@
         },
         {
           "stage": 2,
-          "unit_type": "singleton",
-          "segment_rank": null,
+          "unit_type": "segment",
+          "segment_rank": 8,
           "position_in_segment": 1,
-          "segment_length": 1,
+          "segment_length": 3,
           "segment_blocks": [
-            61
+            61,
+            4,
+            29
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 7,
+          "position_in_segment": 1,
+          "segment_length": 3,
+          "segment_blocks": [
+            61,
+            4,
+            29
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "singleton",
-        "segment_rank": null,
+        "stage": 3,
+        "unit_type": "segment",
+        "segment_rank": 7,
         "position_in_segment": 1,
-        "segment_length": 1,
+        "segment_length": 3,
         "segment_blocks": [
-          61
+          61,
+          4,
+          29
         ]
       }
     },
@@ -2935,10 +3765,20 @@
           "segment_blocks": [
             62
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            62
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -2954,11 +3794,10 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 3,
-          "position_in_segment": 2,
-          "segment_length": 3,
+          "segment_rank": 15,
+          "position_in_segment": 1,
+          "segment_length": 2,
           "segment_blocks": [
-            1,
             63,
             35
           ]
@@ -2966,10 +3805,26 @@
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 1,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            63,
+            35,
+            47,
+            36,
+            5,
+            12
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 2,
+          "segment_length": 8,
+          "segment_blocks": [
+            1,
             63,
             35,
             47,
@@ -2981,12 +3836,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 1,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 2,
+        "segment_length": 8,
         "segment_blocks": [
+          1,
           63,
           35,
           47,
@@ -2999,13 +3855,7 @@
     }
   ],
   "final_stage_linearized_order_original": [
-    37,
-    38,
-    39,
-    40,
-    41,
-    42,
-    43,
+    24,
     25,
     26,
     27,
@@ -3013,6 +3863,14 @@
     29,
     30,
     31,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
     3,
     4,
     5,
@@ -3027,63 +3885,48 @@
     48,
     49,
     50,
-    33,
-    34,
-    35,
     44,
     45,
     46,
+    9,
     10,
     11,
     59,
     60,
-    16,
-    17,
-    62,
-    63,
+    34,
+    35,
     20,
     21,
     0,
     1,
     2,
-    9,
     12,
     13,
     14,
     15,
+    16,
+    17,
     18,
     19,
     22,
     23,
-    24,
     32,
-    36,
+    33,
     55,
     56,
     57,
     58,
-    61
+    61,
+    62,
+    63
   ],
   "final_stage_units_original": [
     {
       "unit_type": "segment",
       "segment_rank": 1,
-      "segment_length": 7,
+      "segment_length": 8,
       "blocks": [
-        37,
-        38,
-        39,
-        40,
-        41,
-        42,
-        43
-      ]
-    },
-    {
-      "unit_type": "segment",
-      "segment_rank": 2,
-      "segment_length": 7,
-      "blocks": [
+        24,
         25,
         26,
         27,
@@ -3091,6 +3934,21 @@
         29,
         30,
         31
+      ]
+    },
+    {
+      "unit_type": "segment",
+      "segment_rank": 2,
+      "segment_length": 8,
+      "blocks": [
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
       ]
     },
     {
@@ -3133,16 +3991,6 @@
       "segment_rank": 6,
       "segment_length": 3,
       "blocks": [
-        33,
-        34,
-        35
-      ]
-    },
-    {
-      "unit_type": "segment",
-      "segment_rank": 7,
-      "segment_length": 3,
-      "blocks": [
         44,
         45,
         46
@@ -3150,16 +3998,17 @@
     },
     {
       "unit_type": "segment",
-      "segment_rank": 8,
-      "segment_length": 2,
+      "segment_rank": 7,
+      "segment_length": 3,
       "blocks": [
+        9,
         10,
         11
       ]
     },
     {
       "unit_type": "segment",
-      "segment_rank": 9,
+      "segment_rank": 8,
       "segment_length": 2,
       "blocks": [
         59,
@@ -3168,25 +4017,16 @@
     },
     {
       "unit_type": "segment",
+      "segment_rank": 9,
+      "segment_length": 2,
+      "blocks": [
+        34,
+        35
+      ]
+    },
+    {
+      "unit_type": "segment",
       "segment_rank": 10,
-      "segment_length": 2,
-      "blocks": [
-        16,
-        17
-      ]
-    },
-    {
-      "unit_type": "segment",
-      "segment_rank": 11,
-      "segment_length": 2,
-      "blocks": [
-        62,
-        63
-      ]
-    },
-    {
-      "unit_type": "segment",
-      "segment_rank": 12,
       "segment_length": 2,
       "blocks": [
         20,
@@ -3215,14 +4055,6 @@
       "segment_length": 1,
       "blocks": [
         2
-      ]
-    },
-    {
-      "unit_type": "singleton",
-      "segment_rank": null,
-      "segment_length": 1,
-      "blocks": [
-        9
       ]
     },
     {
@@ -3262,6 +4094,22 @@
       "segment_rank": null,
       "segment_length": 1,
       "blocks": [
+        16
+      ]
+    },
+    {
+      "unit_type": "singleton",
+      "segment_rank": null,
+      "segment_length": 1,
+      "blocks": [
+        17
+      ]
+    },
+    {
+      "unit_type": "singleton",
+      "segment_rank": null,
+      "segment_length": 1,
+      "blocks": [
         18
       ]
     },
@@ -3294,14 +4142,6 @@
       "segment_rank": null,
       "segment_length": 1,
       "blocks": [
-        24
-      ]
-    },
-    {
-      "unit_type": "singleton",
-      "segment_rank": null,
-      "segment_length": 1,
-      "blocks": [
         32
       ]
     },
@@ -3310,7 +4150,7 @@
       "segment_rank": null,
       "segment_length": 1,
       "blocks": [
-        36
+        33
       ]
     },
     {
@@ -3352,6 +4192,22 @@
       "blocks": [
         61
       ]
+    },
+    {
+      "unit_type": "singleton",
+      "segment_rank": null,
+      "segment_length": 1,
+      "blocks": [
+        62
+      ]
+    },
+    {
+      "unit_type": "singleton",
+      "segment_rank": null,
+      "segment_length": 1,
+      "blocks": [
+        63
+      ]
     }
   ],
   "block_paths_original": [
@@ -3377,10 +4233,20 @@
           "segment_blocks": [
             0
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            0
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -3412,10 +4278,20 @@
           "segment_blocks": [
             1
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            1
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -3447,10 +4323,20 @@
           "segment_blocks": [
             2
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            2
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -3478,6 +4364,21 @@
         {
           "stage": 2,
           "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 1,
+          "segment_length": 6,
+          "segment_blocks": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 1,
           "segment_length": 6,
@@ -3492,7 +4393,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 1,
@@ -3525,6 +4426,21 @@
         {
           "stage": 2,
           "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 2,
+          "segment_length": 6,
+          "segment_blocks": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 2,
           "segment_length": 6,
@@ -3539,7 +4455,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 2,
@@ -3572,6 +4488,21 @@
         {
           "stage": 2,
           "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 3,
+          "segment_length": 6,
+          "segment_blocks": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 3,
           "segment_length": 6,
@@ -3586,7 +4517,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 3,
@@ -3607,7 +4538,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 9,
+          "segment_rank": 8,
           "position_in_segment": 1,
           "segment_length": 3,
           "segment_blocks": [
@@ -3618,6 +4549,21 @@
         },
         {
           "stage": 2,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 4,
+          "segment_length": 6,
+          "segment_blocks": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "stage": 3,
           "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 4,
@@ -3633,7 +4579,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 4,
@@ -3654,7 +4600,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 9,
+          "segment_rank": 8,
           "position_in_segment": 2,
           "segment_length": 3,
           "segment_blocks": [
@@ -3665,6 +4611,21 @@
         },
         {
           "stage": 2,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 5,
+          "segment_length": 6,
+          "segment_blocks": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "stage": 3,
           "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 5,
@@ -3680,7 +4641,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 5,
@@ -3701,7 +4662,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 9,
+          "segment_rank": 8,
           "position_in_segment": 3,
           "segment_length": 3,
           "segment_blocks": [
@@ -3712,6 +4673,21 @@
         },
         {
           "stage": 2,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 6,
+          "segment_length": 6,
+          "segment_blocks": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "stage": 3,
           "unit_type": "segment",
           "segment_rank": 3,
           "position_in_segment": 6,
@@ -3727,7 +4703,7 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 3,
         "position_in_segment": 6,
@@ -3757,23 +4733,39 @@
         },
         {
           "stage": 2,
-          "unit_type": "singleton",
-          "segment_rank": null,
+          "unit_type": "segment",
+          "segment_rank": 8,
           "position_in_segment": 1,
-          "segment_length": 1,
+          "segment_length": 3,
           "segment_blocks": [
-            9
+            9,
+            10,
+            11
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 7,
+          "position_in_segment": 1,
+          "segment_length": 3,
+          "segment_blocks": [
+            9,
+            10,
+            11
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "singleton",
-        "segment_rank": null,
+        "stage": 3,
+        "unit_type": "segment",
+        "segment_rank": 7,
         "position_in_segment": 1,
-        "segment_length": 1,
+        "segment_length": 3,
         "segment_blocks": [
-          9
+          9,
+          10,
+          11
         ]
       }
     },
@@ -3795,21 +4787,35 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 8,
-          "position_in_segment": 1,
-          "segment_length": 2,
+          "position_in_segment": 2,
+          "segment_length": 3,
           "segment_blocks": [
+            9,
+            10,
+            11
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 7,
+          "position_in_segment": 2,
+          "segment_length": 3,
+          "segment_blocks": [
+            9,
             10,
             11
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 8,
-        "position_in_segment": 1,
-        "segment_length": 2,
+        "segment_rank": 7,
+        "position_in_segment": 2,
+        "segment_length": 3,
         "segment_blocks": [
+          9,
           10,
           11
         ]
@@ -3833,21 +4839,35 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 8,
-          "position_in_segment": 2,
-          "segment_length": 2,
+          "position_in_segment": 3,
+          "segment_length": 3,
           "segment_blocks": [
+            9,
+            10,
+            11
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 7,
+          "position_in_segment": 3,
+          "segment_length": 3,
+          "segment_blocks": [
+            9,
             10,
             11
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 8,
-        "position_in_segment": 2,
-        "segment_length": 2,
+        "segment_rank": 7,
+        "position_in_segment": 3,
+        "segment_length": 3,
         "segment_blocks": [
+          9,
           10,
           11
         ]
@@ -3875,10 +4895,20 @@
           "segment_blocks": [
             12
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            12
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -3910,10 +4940,20 @@
           "segment_blocks": [
             13
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            13
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -3945,10 +4985,20 @@
           "segment_blocks": [
             14
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            14
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -3980,10 +5030,20 @@
           "segment_blocks": [
             15
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            15
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -3999,12 +5059,13 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 13,
+          "segment_rank": 5,
           "position_in_segment": 1,
-          "segment_length": 2,
+          "segment_length": 3,
           "segment_blocks": [
             16,
-            17
+            17,
+            18
           ]
         },
         {
@@ -4017,17 +5078,26 @@
             16,
             17
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            16
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 10,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
         "position_in_segment": 1,
-        "segment_length": 2,
+        "segment_length": 1,
         "segment_blocks": [
-          16,
-          17
+          16
         ]
       }
     },
@@ -4037,12 +5107,13 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 13,
+          "segment_rank": 5,
           "position_in_segment": 2,
-          "segment_length": 2,
+          "segment_length": 3,
           "segment_blocks": [
             16,
-            17
+            17,
+            18
           ]
         },
         {
@@ -4055,16 +5126,25 @@
             16,
             17
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            17
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 10,
-        "position_in_segment": 2,
-        "segment_length": 2,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
+        "position_in_segment": 1,
+        "segment_length": 1,
         "segment_blocks": [
-          16,
           17
         ]
       }
@@ -4074,11 +5154,13 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "singleton",
-          "segment_rank": null,
-          "position_in_segment": 1,
-          "segment_length": 1,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 3,
+          "segment_length": 3,
           "segment_blocks": [
+            16,
+            17,
             18
           ]
         },
@@ -4091,10 +5173,20 @@
           "segment_blocks": [
             18
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            18
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -4126,10 +5218,20 @@
           "segment_blocks": [
             19
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            19
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -4145,7 +5247,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 16,
+          "segment_rank": 14,
           "position_in_segment": 1,
           "segment_length": 2,
           "segment_blocks": [
@@ -4156,7 +5258,18 @@
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 12,
+          "segment_rank": 11,
+          "position_in_segment": 1,
+          "segment_length": 2,
+          "segment_blocks": [
+            20,
+            21
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 10,
           "position_in_segment": 1,
           "segment_length": 2,
           "segment_blocks": [
@@ -4166,9 +5279,9 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 12,
+        "segment_rank": 10,
         "position_in_segment": 1,
         "segment_length": 2,
         "segment_blocks": [
@@ -4183,7 +5296,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 16,
+          "segment_rank": 14,
           "position_in_segment": 2,
           "segment_length": 2,
           "segment_blocks": [
@@ -4194,7 +5307,18 @@
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 12,
+          "segment_rank": 11,
+          "position_in_segment": 2,
+          "segment_length": 2,
+          "segment_blocks": [
+            20,
+            21
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 10,
           "position_in_segment": 2,
           "segment_length": 2,
           "segment_blocks": [
@@ -4204,9 +5328,9 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 12,
+        "segment_rank": 10,
         "position_in_segment": 2,
         "segment_length": 2,
         "segment_blocks": [
@@ -4237,10 +5361,20 @@
           "segment_blocks": [
             22
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            22
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -4272,10 +5406,20 @@
           "segment_blocks": [
             23
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            23
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -4290,14 +5434,12 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
           "position_in_segment": 1,
-          "segment_length": 3,
+          "segment_length": 1,
           "segment_blocks": [
-            24,
-            25,
-            26
+            24
           ]
         },
         {
@@ -4309,41 +5451,15 @@
           "segment_blocks": [
             24
           ]
-        }
-      ],
-      "final_stage_position": {
-        "stage": 2,
-        "unit_type": "singleton",
-        "segment_rank": null,
-        "position_in_segment": 1,
-        "segment_length": 1,
-        "segment_blocks": [
-          24
-        ]
-      }
-    },
-    {
-      "block": 25,
-      "path": [
-        {
-          "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 3,
-          "position_in_segment": 2,
-          "segment_length": 3,
-          "segment_blocks": [
-            24,
-            25,
-            26
-          ]
         },
         {
-          "stage": 2,
+          "stage": 3,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 1,
           "position_in_segment": 1,
-          "segment_length": 7,
+          "segment_length": 8,
           "segment_blocks": [
+            24,
             25,
             26,
             27,
@@ -4355,12 +5471,78 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
+        "segment_rank": 1,
         "position_in_segment": 1,
-        "segment_length": 7,
+        "segment_length": 8,
         "segment_blocks": [
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ]
+      }
+    },
+    {
+      "block": 25,
+      "path": [
+        {
+          "stage": 1,
+          "unit_type": "segment",
+          "segment_rank": 15,
+          "position_in_segment": 1,
+          "segment_length": 2,
+          "segment_blocks": [
+            25,
+            26
+          ]
+        },
+        {
+          "stage": 2,
+          "unit_type": "segment",
+          "segment_rank": 3,
+          "position_in_segment": 1,
+          "segment_length": 6,
+          "segment_blocks": [
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 2,
+          "segment_length": 8,
+          "segment_blocks": [
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ]
+        }
+      ],
+      "final_stage_position": {
+        "stage": 3,
+        "unit_type": "segment",
+        "segment_rank": 1,
+        "position_in_segment": 2,
+        "segment_length": 8,
+        "segment_blocks": [
+          24,
           25,
           26,
           27,
@@ -4377,11 +5559,10 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 3,
-          "position_in_segment": 3,
-          "segment_length": 3,
+          "segment_rank": 15,
+          "position_in_segment": 2,
+          "segment_length": 2,
           "segment_blocks": [
-            24,
             25,
             26
           ]
@@ -4389,10 +5570,26 @@
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 2,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 3,
+          "segment_length": 8,
+          "segment_blocks": [
+            24,
             25,
             26,
             27,
@@ -4404,12 +5601,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 2,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 3,
+        "segment_length": 8,
         "segment_blocks": [
+          24,
           25,
           26,
           27,
@@ -4426,22 +5624,39 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 8,
+          "segment_rank": 3,
           "position_in_segment": 1,
-          "segment_length": 3,
+          "segment_length": 4,
           "segment_blocks": [
             27,
             28,
-            29
+            29,
+            30
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 3,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 4,
+          "segment_length": 8,
+          "segment_blocks": [
+            24,
             25,
             26,
             27,
@@ -4453,12 +5668,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 3,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 4,
+        "segment_length": 8,
         "segment_blocks": [
+          24,
           25,
           26,
           27,
@@ -4475,22 +5691,39 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 8,
+          "segment_rank": 3,
           "position_in_segment": 2,
-          "segment_length": 3,
+          "segment_length": 4,
           "segment_blocks": [
             27,
             28,
-            29
+            29,
+            30
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 4,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 5,
+          "segment_length": 8,
+          "segment_blocks": [
+            24,
             25,
             26,
             27,
@@ -4502,12 +5735,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 4,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 5,
+        "segment_length": 8,
         "segment_blocks": [
+          24,
           25,
           26,
           27,
@@ -4524,22 +5758,39 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 8,
+          "segment_rank": 3,
           "position_in_segment": 3,
-          "segment_length": 3,
+          "segment_length": 4,
           "segment_blocks": [
             27,
             28,
-            29
+            29,
+            30
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 5,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 6,
+          "segment_length": 8,
+          "segment_blocks": [
+            24,
             25,
             26,
             27,
@@ -4551,12 +5802,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 5,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 6,
+        "segment_length": 8,
         "segment_blocks": [
+          24,
           25,
           26,
           27,
@@ -4573,21 +5825,39 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 11,
-          "position_in_segment": 1,
-          "segment_length": 2,
+          "segment_rank": 3,
+          "position_in_segment": 4,
+          "segment_length": 4,
           "segment_blocks": [
-            30,
-            31
+            27,
+            28,
+            29,
+            30
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
-          "segment_rank": 2,
+          "segment_rank": 3,
           "position_in_segment": 6,
-          "segment_length": 7,
+          "segment_length": 6,
           "segment_blocks": [
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 7,
+          "segment_length": 8,
+          "segment_blocks": [
+            24,
             25,
             26,
             27,
@@ -4599,12 +5869,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 6,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 7,
+        "segment_length": 8,
         "segment_blocks": [
+          24,
           25,
           26,
           27,
@@ -4620,22 +5891,32 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 11,
-          "position_in_segment": 2,
-          "segment_length": 2,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
           "segment_blocks": [
-            30,
             31
           ]
         },
         {
           "stage": 2,
-          "unit_type": "segment",
-          "segment_rank": 2,
-          "position_in_segment": 7,
-          "segment_length": 7,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
           "segment_blocks": [
+            31
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 1,
+          "position_in_segment": 8,
+          "segment_length": 8,
+          "segment_blocks": [
+            24,
             25,
             26,
             27,
@@ -4647,12 +5928,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 2,
-        "position_in_segment": 7,
-        "segment_length": 7,
+        "segment_rank": 1,
+        "position_in_segment": 8,
+        "segment_length": 8,
         "segment_blocks": [
+          24,
           25,
           26,
           27,
@@ -4685,10 +5967,20 @@
           "segment_blocks": [
             32
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            32
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -4703,14 +5995,12 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 5,
+          "unit_type": "singleton",
+          "segment_rank": null,
           "position_in_segment": 1,
-          "segment_length": 3,
+          "segment_length": 1,
           "segment_blocks": [
-            33,
-            34,
-            35
+            33
           ]
         },
         {
@@ -4724,18 +6014,26 @@
             34,
             35
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            33
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 6,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
         "position_in_segment": 1,
-        "segment_length": 3,
+        "segment_length": 1,
         "segment_blocks": [
-          33,
-          34,
-          35
+          33
         ]
       }
     },
@@ -4745,11 +6043,10 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 5,
-          "position_in_segment": 2,
-          "segment_length": 3,
+          "segment_rank": 12,
+          "position_in_segment": 1,
+          "segment_length": 2,
           "segment_blocks": [
-            33,
             34,
             35
           ]
@@ -4765,16 +6062,26 @@
             34,
             35
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 9,
+          "position_in_segment": 1,
+          "segment_length": 2,
+          "segment_blocks": [
+            34,
+            35
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 6,
-        "position_in_segment": 2,
-        "segment_length": 3,
+        "segment_rank": 9,
+        "position_in_segment": 1,
+        "segment_length": 2,
         "segment_blocks": [
-          33,
           34,
           35
         ]
@@ -4786,11 +6093,10 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 5,
-          "position_in_segment": 3,
-          "segment_length": 3,
+          "segment_rank": 12,
+          "position_in_segment": 2,
+          "segment_length": 2,
           "segment_blocks": [
-            33,
             34,
             35
           ]
@@ -4806,16 +6112,26 @@
             34,
             35
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 9,
+          "position_in_segment": 2,
+          "segment_length": 2,
+          "segment_blocks": [
+            34,
+            35
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 6,
-        "position_in_segment": 3,
-        "segment_length": 3,
+        "segment_rank": 9,
+        "position_in_segment": 2,
+        "segment_length": 2,
         "segment_blocks": [
-          33,
           34,
           35
         ]
@@ -4836,23 +6152,54 @@
         },
         {
           "stage": 2,
-          "unit_type": "singleton",
-          "segment_rank": null,
+          "unit_type": "segment",
+          "segment_rank": 1,
           "position_in_segment": 1,
-          "segment_length": 1,
+          "segment_length": 8,
           "segment_blocks": [
-            36
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 1,
+          "segment_length": 8,
+          "segment_blocks": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "singleton",
-        "segment_rank": null,
+        "stage": 3,
+        "unit_type": "segment",
+        "segment_rank": 2,
         "position_in_segment": 1,
-        "segment_length": 1,
+        "segment_length": 8,
         "segment_blocks": [
-          36
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43
         ]
       }
     },
@@ -4873,9 +6220,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 1,
-          "segment_length": 7,
+          "position_in_segment": 2,
+          "segment_length": 8,
           "segment_blocks": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 2,
+          "segment_length": 8,
+          "segment_blocks": [
+            36,
             37,
             38,
             39,
@@ -4887,12 +6252,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 1,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 2,
+        "segment_length": 8,
         "segment_blocks": [
+          36,
           37,
           38,
           39,
@@ -4923,9 +6289,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 2,
-          "segment_length": 7,
+          "position_in_segment": 3,
+          "segment_length": 8,
           "segment_blocks": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 3,
+          "segment_length": 8,
+          "segment_blocks": [
+            36,
             37,
             38,
             39,
@@ -4937,12 +6321,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 2,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 3,
+        "segment_length": 8,
         "segment_blocks": [
+          36,
           37,
           38,
           39,
@@ -4973,9 +6358,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 3,
-          "segment_length": 7,
+          "position_in_segment": 4,
+          "segment_length": 8,
           "segment_blocks": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 4,
+          "segment_length": 8,
+          "segment_blocks": [
+            36,
             37,
             38,
             39,
@@ -4987,12 +6390,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 3,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 4,
+        "segment_length": 8,
         "segment_blocks": [
+          36,
           37,
           38,
           39,
@@ -5023,9 +6427,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 4,
-          "segment_length": 7,
+          "position_in_segment": 5,
+          "segment_length": 8,
           "segment_blocks": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 5,
+          "segment_length": 8,
+          "segment_blocks": [
+            36,
             37,
             38,
             39,
@@ -5037,12 +6459,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 4,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 5,
+        "segment_length": 8,
         "segment_blocks": [
+          36,
           37,
           38,
           39,
@@ -5073,9 +6496,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 5,
-          "segment_length": 7,
+          "position_in_segment": 6,
+          "segment_length": 8,
           "segment_blocks": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 6,
+          "segment_length": 8,
+          "segment_blocks": [
+            36,
             37,
             38,
             39,
@@ -5087,12 +6528,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 5,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 6,
+        "segment_length": 8,
         "segment_blocks": [
+          36,
           37,
           38,
           39,
@@ -5108,22 +6550,39 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 14,
+          "unit_type": "singleton",
+          "segment_rank": null,
           "position_in_segment": 1,
-          "segment_length": 2,
+          "segment_length": 1,
           "segment_blocks": [
-            42,
-            43
+            42
           ]
         },
         {
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 6,
-          "segment_length": 7,
+          "position_in_segment": 7,
+          "segment_length": 8,
           "segment_blocks": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 7,
+          "segment_length": 8,
+          "segment_blocks": [
+            36,
             37,
             38,
             39,
@@ -5135,12 +6594,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 6,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 7,
+        "segment_length": 8,
         "segment_blocks": [
+          36,
           37,
           38,
           39,
@@ -5156,12 +6616,11 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "segment",
-          "segment_rank": 14,
-          "position_in_segment": 2,
-          "segment_length": 2,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
           "segment_blocks": [
-            42,
             43
           ]
         },
@@ -5169,9 +6628,27 @@
           "stage": 2,
           "unit_type": "segment",
           "segment_rank": 1,
-          "position_in_segment": 7,
-          "segment_length": 7,
+          "position_in_segment": 8,
+          "segment_length": 8,
           "segment_blocks": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 2,
+          "position_in_segment": 8,
+          "segment_length": 8,
+          "segment_blocks": [
+            36,
             37,
             38,
             39,
@@ -5183,12 +6660,13 @@
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 1,
-        "position_in_segment": 7,
-        "segment_length": 7,
+        "segment_rank": 2,
+        "position_in_segment": 8,
+        "segment_length": 8,
         "segment_blocks": [
+          36,
           37,
           38,
           39,
@@ -5225,12 +6703,24 @@
             45,
             46
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 6,
+          "position_in_segment": 1,
+          "segment_length": 3,
+          "segment_blocks": [
+            44,
+            45,
+            46
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 7,
+        "segment_rank": 6,
         "position_in_segment": 1,
         "segment_length": 3,
         "segment_blocks": [
@@ -5266,12 +6756,24 @@
             45,
             46
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 6,
+          "position_in_segment": 2,
+          "segment_length": 3,
+          "segment_blocks": [
+            44,
+            45,
+            46
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 7,
+        "segment_rank": 6,
         "position_in_segment": 2,
         "segment_length": 3,
         "segment_blocks": [
@@ -5307,12 +6809,24 @@
             45,
             46
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 6,
+          "position_in_segment": 3,
+          "segment_length": 3,
+          "segment_blocks": [
+            44,
+            45,
+            46
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 7,
+        "segment_rank": 6,
         "position_in_segment": 3,
         "segment_length": 3,
         "segment_blocks": [
@@ -5350,10 +6864,23 @@
             49,
             50
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 1,
+          "segment_length": 4,
+          "segment_blocks": [
+            47,
+            48,
+            49,
+            50
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 5,
         "position_in_segment": 1,
@@ -5394,10 +6921,23 @@
             49,
             50
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 2,
+          "segment_length": 4,
+          "segment_blocks": [
+            47,
+            48,
+            49,
+            50
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 5,
         "position_in_segment": 2,
@@ -5438,10 +6978,23 @@
             49,
             50
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 3,
+          "segment_length": 4,
+          "segment_blocks": [
+            47,
+            48,
+            49,
+            50
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 5,
         "position_in_segment": 3,
@@ -5482,10 +7035,23 @@
             49,
             50
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 5,
+          "position_in_segment": 4,
+          "segment_length": 4,
+          "segment_blocks": [
+            47,
+            48,
+            49,
+            50
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 5,
         "position_in_segment": 4,
@@ -5525,10 +7091,23 @@
             53,
             54
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 1,
+          "segment_length": 4,
+          "segment_blocks": [
+            51,
+            52,
+            53,
+            54
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 4,
         "position_in_segment": 1,
@@ -5568,10 +7147,23 @@
             53,
             54
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 2,
+          "segment_length": 4,
+          "segment_blocks": [
+            51,
+            52,
+            53,
+            54
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 4,
         "position_in_segment": 2,
@@ -5611,10 +7203,23 @@
             53,
             54
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 3,
+          "segment_length": 4,
+          "segment_blocks": [
+            51,
+            52,
+            53,
+            54
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 4,
         "position_in_segment": 3,
@@ -5632,12 +7237,14 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "singleton",
-          "segment_rank": null,
+          "unit_type": "segment",
+          "segment_rank": 9,
           "position_in_segment": 1,
-          "segment_length": 1,
+          "segment_length": 3,
           "segment_blocks": [
-            54
+            54,
+            55,
+            56
           ]
         },
         {
@@ -5652,10 +7259,23 @@
             53,
             54
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 4,
+          "position_in_segment": 4,
+          "segment_length": 4,
+          "segment_blocks": [
+            51,
+            52,
+            53,
+            54
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
         "segment_rank": 4,
         "position_in_segment": 4,
@@ -5673,12 +7293,14 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "singleton",
-          "segment_rank": null,
-          "position_in_segment": 1,
-          "segment_length": 1,
+          "unit_type": "segment",
+          "segment_rank": 9,
+          "position_in_segment": 2,
+          "segment_length": 3,
           "segment_blocks": [
-            55
+            54,
+            55,
+            56
           ]
         },
         {
@@ -5690,10 +7312,20 @@
           "segment_blocks": [
             55
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            55
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -5708,11 +7340,13 @@
       "path": [
         {
           "stage": 1,
-          "unit_type": "singleton",
-          "segment_rank": null,
-          "position_in_segment": 1,
-          "segment_length": 1,
+          "unit_type": "segment",
+          "segment_rank": 9,
+          "position_in_segment": 3,
+          "segment_length": 3,
           "segment_blocks": [
+            54,
+            55,
             56
           ]
         },
@@ -5725,10 +7359,20 @@
           "segment_blocks": [
             56
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            56
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -5760,10 +7404,20 @@
           "segment_blocks": [
             57
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            57
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -5795,10 +7449,20 @@
           "segment_blocks": [
             58
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            58
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -5814,7 +7478,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 12,
+          "segment_rank": 11,
           "position_in_segment": 1,
           "segment_length": 2,
           "segment_blocks": [
@@ -5832,12 +7496,23 @@
             59,
             60
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 8,
+          "position_in_segment": 1,
+          "segment_length": 2,
+          "segment_blocks": [
+            59,
+            60
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 9,
+        "segment_rank": 8,
         "position_in_segment": 1,
         "segment_length": 2,
         "segment_blocks": [
@@ -5852,7 +7527,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 12,
+          "segment_rank": 11,
           "position_in_segment": 2,
           "segment_length": 2,
           "segment_blocks": [
@@ -5870,12 +7545,23 @@
             59,
             60
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "segment",
+          "segment_rank": 8,
+          "position_in_segment": 2,
+          "segment_length": 2,
+          "segment_blocks": [
+            59,
+            60
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "segment",
-        "segment_rank": 9,
+        "segment_rank": 8,
         "position_in_segment": 2,
         "segment_length": 2,
         "segment_blocks": [
@@ -5906,10 +7592,20 @@
           "segment_blocks": [
             61
           ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            61
+          ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
+        "stage": 3,
         "unit_type": "singleton",
         "segment_rank": null,
         "position_in_segment": 1,
@@ -5925,7 +7621,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 15,
+          "segment_rank": 13,
           "position_in_segment": 1,
           "segment_length": 2,
           "segment_blocks": [
@@ -5935,25 +7631,33 @@
         },
         {
           "stage": 2,
-          "unit_type": "segment",
-          "segment_rank": 11,
+          "unit_type": "singleton",
+          "segment_rank": null,
           "position_in_segment": 1,
-          "segment_length": 2,
+          "segment_length": 1,
           "segment_blocks": [
-            62,
-            63
+            62
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
+            62
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 11,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
         "position_in_segment": 1,
-        "segment_length": 2,
+        "segment_length": 1,
         "segment_blocks": [
-          62,
-          63
+          62
         ]
       }
     },
@@ -5963,7 +7667,7 @@
         {
           "stage": 1,
           "unit_type": "segment",
-          "segment_rank": 15,
+          "segment_rank": 13,
           "position_in_segment": 2,
           "segment_length": 2,
           "segment_blocks": [
@@ -5973,24 +7677,32 @@
         },
         {
           "stage": 2,
-          "unit_type": "segment",
-          "segment_rank": 11,
-          "position_in_segment": 2,
-          "segment_length": 2,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
           "segment_blocks": [
-            62,
+            63
+          ]
+        },
+        {
+          "stage": 3,
+          "unit_type": "singleton",
+          "segment_rank": null,
+          "position_in_segment": 1,
+          "segment_length": 1,
+          "segment_blocks": [
             63
           ]
         }
       ],
       "final_stage_position": {
-        "stage": 2,
-        "unit_type": "segment",
-        "segment_rank": 11,
-        "position_in_segment": 2,
-        "segment_length": 2,
+        "stage": 3,
+        "unit_type": "singleton",
+        "segment_rank": null,
+        "position_in_segment": 1,
+        "segment_length": 1,
         "segment_blocks": [
-          62,
           63
         ]
       }
