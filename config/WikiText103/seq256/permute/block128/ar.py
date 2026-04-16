@@ -10,7 +10,7 @@ wandb_project = 'AOGPT-base-block'
 wandb_run_name = 'seq256-ar-b128'
 
 dataset = 'wikitext103'
-batch_size = 128
+batch_size = 64
 block_size = 256
 gradient_accumulation_steps = 2
 permute_data = True

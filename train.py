@@ -70,6 +70,7 @@ block_size = 1024
 aogpt_train_mode = 'AR'
 main_eval_mode = 'Random'
 generalization_eval_mode = ''
+order_impl = 'block'
 n_layer = 12
 n_head = 12
 n_embd = 768
@@ -142,9 +143,12 @@ device_type = 'cuda' if 'cuda' in device else 'cpu' # for later use in torch.aut
 # note: float16 data type will automatically use a GradScaler
 ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[dtype]
 ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
-if block_size % block_order_block_len != 0:
-    raise ValueError(f"block_size={block_size} must be divisible by block_order_block_len={block_order_block_len}")
-num_blocks = block_size // block_order_block_len
+effective_order_block_len = 1 if str(order_impl) == 'token' else int(block_order_block_len)
+if block_size % effective_order_block_len != 0:
+    raise ValueError(
+        f"block_size={block_size} must be divisible by effective_order_block_len={effective_order_block_len}"
+    )
+num_blocks = block_size // effective_order_block_len
 
 np.random.seed(permute_seed)
 if permute_data:
@@ -154,7 +158,7 @@ if permute_data:
     inverse_block_perm = invert_permutation(fixed_block_perm)
     fixed_token_perm = block_permutation_to_token_permutation(
         fixed_block_perm,
-        block_len=block_order_block_len,
+        block_len=effective_order_block_len,
     )
 else:
     fixed_block_perm = None
@@ -202,7 +206,8 @@ if os.path.exists(meta_path):
 # model init
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
                   bias=bias, vocab_size=None, dropout=dropout,
-                  block_order_block_len=block_order_block_len) # start with model_args from command line
+                  block_order_block_len=effective_order_block_len,
+                  order_impl=order_impl) # start with model_args from command line
 if init_from == 'scratch':
     # init a new model from scratch
     print("Initializing a new model from scratch")
@@ -220,7 +225,7 @@ elif init_from == 'resume':
     checkpoint_model_args = checkpoint['model_args']
     # force these config attributes to be equal otherwise we can't even resume training
     # the rest of the attributes (e.g. dropout) can stay as desired from command line
-    for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size', 'block_order_block_len']:
+    for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size', 'block_order_block_len', 'order_impl']:
         model_args[k] = checkpoint_model_args[k]
     # create the model
     gptconf = AOGPTConfig(**model_args)
@@ -484,7 +489,7 @@ def estimate_eval_generate_step_block_loss_curves(num_batches_override=None):
                 original_block_orders = inverse_block_perm.to(device=X.device).unsqueeze(0).expand(X.size(0), -1)
                 original_token_orders = expand_block_orders_to_token_orders(
                     original_block_orders,
-                    block_len=block_order_block_len,
+                    block_len=effective_order_block_len,
                 )
                 _, _, original_l2r_token_losses = model(
                     X,
@@ -494,18 +499,18 @@ def estimate_eval_generate_step_block_loss_curves(num_batches_override=None):
                 )
         ar_block_losses = token_losses_to_block_losses(
             ar_token_losses,
-            block_len=block_order_block_len,
+            block_len=effective_order_block_len,
         )
         random_block_losses = token_losses_to_block_losses(
             random_token_losses,
-            block_len=block_order_block_len,
+            block_len=effective_order_block_len,
         )
         ar_block_curves.append(ar_block_losses.mean(dim=0).float().cpu())
         random_block_curves.append(random_block_losses.mean(dim=0).float().cpu())
         if original_l2r_block_curves is not None:
             original_l2r_block_losses = token_losses_to_block_losses(
                 original_l2r_token_losses,
-                block_len=block_order_block_len,
+                block_len=effective_order_block_len,
             )
             original_l2r_block_curves.append(original_l2r_block_losses.mean(dim=0).float().cpu())
 
@@ -668,7 +673,7 @@ while True:
                 )
                 mixed_token_orders = expand_block_orders_to_token_orders(
                     mixed_block_orders,
-                    block_len=block_order_block_len,
+                    block_len=effective_order_block_len,
                 )
                 logits, loss = model(X, mode=None, orders=mixed_token_orders)
                 latest_policy_train_stats = {

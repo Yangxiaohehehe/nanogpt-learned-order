@@ -10,7 +10,7 @@ wandb_project = 'AOGPT-base-block'
 wandb_run_name = 'seq256-random-b1-permute'
 
 dataset = 'wikitext103'
-batch_size = 32
+batch_size = 64
 block_size = 256
 gradient_accumulation_steps = 2
 permute_data = True
@@ -22,6 +22,7 @@ train_stage = 'standard'
 aogpt_train_mode = 'Random'
 main_eval_mode = 'Random'
 generalization_eval_mode = ''
+order_impl = 'token'
 n_layer = 3
 n_head = 8
 n_embd = 256
