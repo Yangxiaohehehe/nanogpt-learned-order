@@ -1,13 +1,13 @@
 # WikiText103 seq512 non-permuted AR config for the 32-block setup (block_len=16).
 
-out_dir = 'out-wikitext103-seq512-ar-b32'
+out_dir = 'out/base/nonpermute/seq512/block32/out-wikitext103-seq512-ar-b32'
 eval_interval = 250
 eval_iters = 200
 log_interval = 10
 
 wandb_log = True
-wandb_project = 'ao-gpt-experiments-block-order'
-wandb_run_name = 'wikitext103-seq512-ar-b32'
+wandb_project = 'AOGPT-base-block'
+wandb_run_name = 'seq512-ar-b32'
 
 dataset = 'wikitext103'
 batch_size = 32
@@ -27,14 +27,6 @@ n_embd = 128
 dropout = 0
 
 block_order_block_len = 16
-policy_prefix_k = 8
-utility_horizon = 8
-utility_alpha = 1.0
-utility_beta = 1.0
-baseline_momentum = 0.95
-lambda_list = 0.1
-order_temperature = 1.0
-order_entropy_temperature = 1.0
 
 learning_rate = 1e-3
 max_iters = 20000

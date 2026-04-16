@@ -1,13 +1,13 @@
 # WikiText103 seq256 permuted RANDOM config for the 128-block setup (block_len=2).
 
-out_dir = 'attn/seq256-random-b128-permute-block'
+out_dir = 'out/base/permute/seq256/block128/seq256-random-b128-permute-block'
 eval_interval = 250
 eval_iters = 200
 log_interval = 10
 
 wandb_log = True
-wandb_project = 'seq256-random-b128-permute-block-attn'
-wandb_run_name = 'wikitext103-seq256-random-b128-permute-block'
+wandb_project = 'AOGPT-base-block'
+wandb_run_name = 'seq256-random-b128-permute'
 
 dataset = 'wikitext103'
 batch_size = 128
@@ -28,14 +28,6 @@ n_embd = 256
 dropout = 0
 
 block_order_block_len = 2
-policy_prefix_k = 16
-utility_horizon = 16
-utility_alpha = 1.0
-utility_beta = 1.0
-baseline_momentum = 0.95
-lambda_list = 0.1
-order_temperature = 1.0
-order_entropy_temperature = 1.0
 
 learning_rate = 1e-3
 max_iters = 20000

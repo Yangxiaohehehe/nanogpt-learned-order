@@ -20,6 +20,7 @@ from order_utils import (
     invert_permutation,
     token_losses_to_block_losses,
 )
+from path_layout import default_eval_out_dir
 
 
 def parse_args():
@@ -30,7 +31,7 @@ def parse_args():
         )
     )
     parser.add_argument("--ckpt_path", type=Path, required=True)
-    parser.add_argument("--out_dir", type=Path, required=True)
+    parser.add_argument("--out_dir", type=Path, default=None)
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--data_dir", type=Path, default=None)
     parser.add_argument("--split", type=str, default="val", choices=["train", "val"])
@@ -145,6 +146,8 @@ def build_curve_figure(curve, title, output_path: Path):
 
 def main():
     args = parse_args()
+    if args.out_dir is None:
+        args.out_dir = default_eval_out_dir(REPO_ROOT, args.ckpt_path, "permuted_ckpt_generate_step_eval")
     checkpoint = load_checkpoint(args.ckpt_path, args.device)
     data_dir = resolve_data_dir(args, checkpoint)
     tokens = load_tokens(data_dir, args.split)

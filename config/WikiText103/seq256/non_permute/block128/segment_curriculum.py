@@ -2,10 +2,13 @@
 # Usage:
 #   python scripts/runner/segment_curriculum_runner.py config/WikiText103/block128/standard/segment_curriculum.py
 
-config = "config/WikiText103/block128/standard/random.py"
+config = "config/WikiText103/seq256/non_permute/block128/random.py"
 
-train_out_dir = "out-wikitext103-random-b128-curriculum-attn"
-benchmark_root = "Report/curriculum/segment_curriculum_b128_big"
+train_out_dir = "out/curriculum/nonpermute/seq256/block128/out-wikitext103-random-b128-curriculum-attn"
+benchmark_root = "Report/curriculum/nonpermute/seq256/block128/segment_curriculum_b128_big"
+
+wandb_project = 'AOGPT-order-block'
+wandb_run_name = 'seq256-random-b128-curriculum'
 
 # block128 has 128 * 127 ordered pairs, so we keep pair mining selective while
 # making the curriculum itself stronger across more stages.

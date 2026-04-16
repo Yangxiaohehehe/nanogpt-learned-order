@@ -4,8 +4,11 @@
 
 config = 'config/WikiText103/seq512/non_permute/block128/random.py'
 
-train_out_dir = 'out-wikitext103-seq512-random-b128-curriculum'
-benchmark_root = 'Report/curriculum/seq512/non_permute/block128'
+train_out_dir = 'out/curriculum/nonpermute/seq512/block128/out-wikitext103-seq512-random-b128-curriculum'
+benchmark_root = 'Report/curriculum/nonpermute/seq512/block128/block128'
+
+wandb_project = 'AOGPT-order-block'
+wandb_run_name = 'seq512-random-b128-curriculum'
 
 warmup_iters = 7000
 stage_iters = 7000

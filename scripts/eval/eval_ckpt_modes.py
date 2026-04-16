@@ -23,12 +23,13 @@ from order_utils import (
     invert_permutation,
     token_losses_to_block_losses,
 )
+from path_layout import default_eval_out_dir
 
 
 @dataclass
 class EvalConfig:
     ckpt_path: Path
-    out_dir: Path
+    out_dir: Optional[Path]
     data_dir: Optional[Path] = None
     dataset: Optional[str] = None
     split: str = "val"
@@ -606,7 +607,10 @@ def save_order_distance_csv(out_dir: Path, order_distance_to_ar: Dict[str, Dict[
 
 def run_evaluation(config: EvalConfig):
     config.ckpt_path = Path(config.ckpt_path)
-    config.out_dir = Path(config.out_dir)
+    if config.out_dir is None:
+        config.out_dir = default_eval_out_dir(REPO_ROOT, config.ckpt_path, "eval_ckpt_modes")
+    else:
+        config.out_dir = Path(config.out_dir)
     config.out_dir.mkdir(parents=True, exist_ok=True)
 
     model, checkpoint = load_model(config.ckpt_path, config.device)
@@ -927,7 +931,7 @@ def run_evaluation(config: EvalConfig):
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate AO-GPT checkpoint under AR and Random generation orders.")
     parser.add_argument("--ckpt_path", type=Path, required=True)
-    parser.add_argument("--out_dir", type=Path, required=True)
+    parser.add_argument("--out_dir", type=Path, default=None)
     parser.add_argument("--data_dir", type=Path, default=None)
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--split", type=str, default="val")

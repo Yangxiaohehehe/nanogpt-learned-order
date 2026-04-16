@@ -1,7 +1,6 @@
 from contextlib import nullcontext
 
 import torch
-from torch.nn import functional as F
 
 
 def _validate_block_layout(length, block_len):
@@ -73,95 +72,9 @@ def token_losses_to_block_losses(token_losses, block_len=16):
     return token_losses.float().view(batch_size, num_blocks, block_len).mean(dim=-1)
 
 
-def compute_future_block_stats(block_losses, horizon=4):
-    """
-    Compute future-window mean and variance at each reveal step.
-
-    Args:
-        block_losses: (B, num_blocks) ordered by reveal block step.
-    Returns:
-        future_means: (B, num_blocks)
-        future_vars: (B, num_blocks)
-    """
-    batch_size, num_blocks = block_losses.shape
-    future_means = torch.zeros_like(block_losses, dtype=torch.float32)
-    future_vars = torch.zeros_like(block_losses, dtype=torch.float32)
-    float_losses = block_losses.float()
-
-    for step in range(num_blocks):
-        window_end = min(num_blocks, step + int(horizon))
-        window = float_losses[:, step:window_end]
-        future_means[:, step] = window.mean(dim=-1)
-        future_vars[:, step] = window.var(dim=-1, unbiased=False)
-    return future_means, future_vars
-
-
-def update_stepwise_ema_baseline(baseline, current_batch_stat, momentum=0.95, initialized=False):
-    """
-    EMA update for step-wise random-order baselines.
-    """
-    if not initialized:
-        return current_batch_stat.detach().clone()
-    return momentum * baseline + (1.0 - momentum) * current_batch_stat.detach()
-
-
-def compute_block_residual_utilities(
-    block_losses,
-    step_mean_baseline,
-    step_var_baseline,
-    horizon=4,
-    alpha=1.0,
-    beta=1.0,
-):
-    """
-    Build reveal-step utilities from de-trended future mean/variance statistics.
-
-    Returns:
-        step_utilities: (B, num_blocks)
-        future_means: (B, num_blocks)
-        future_vars: (B, num_blocks)
-        residual_means: (B, num_blocks)
-        residual_vars: (B, num_blocks)
-    """
-    future_means, future_vars = compute_future_block_stats(block_losses, horizon=horizon)
-    residual_means = future_means - step_mean_baseline.view(1, -1)
-    residual_vars = future_vars - step_var_baseline.view(1, -1)
-    step_utilities = -float(alpha) * residual_means - float(beta) * residual_vars
-    return step_utilities, future_means, future_vars, residual_means, residual_vars
-
-
-def scatter_block_utilities_to_original_positions(step_utilities, block_orders):
-    """
-    Scatter reveal-step utilities back to original block indices.
-    """
-    batch_size, num_blocks = step_utilities.shape
-    original = torch.zeros_like(step_utilities, dtype=torch.float32)
-    original.scatter_(1, block_orders, step_utilities.float())
-    expected = torch.arange(num_blocks, device=block_orders.device).unsqueeze(0).expand(batch_size, -1)
-    if not torch.equal(torch.sort(block_orders, dim=-1).values, expected):
-        raise ValueError("block_orders is not a valid block permutation")
-    return original
-
-
-def listwise_block_order_loss(scores, block_utilities, temperature=1.0, eps=1e-8):
-    """
-    Block-level listwise ranking loss driven by residual utilities, not l2r labels.
-    """
-    scaled_scores = scores / max(float(temperature), eps)
-    scaled_utilities = block_utilities.detach() / max(float(temperature), eps)
-    log_p = F.log_softmax(scaled_scores, dim=-1)
-    q = F.softmax(scaled_utilities, dim=-1)
-    return -(q * log_p).sum(dim=-1).mean()
-
-
 def compute_prefix_auc(step_losses, k):
     k = max(1, min(int(k), step_losses.size(1)))
     return step_losses[:, :k].mean()
-
-
-def compute_order_entropy(scores, temperature=1.0, eps=1e-8):
-    probs = F.softmax(scores / max(float(temperature), eps), dim=-1)
-    return -(probs * (probs.clamp_min(eps).log())).sum(dim=-1).mean()
 
 
 def kendall_tau_to_l2r(orders):
@@ -428,12 +341,3 @@ def greedy_adjacent_swap_search(
         "final_full_loss_per_sample": history[-1]["full_loss_per_sample"],
         "final_kendall_per_sample": history[-1]["kendall_per_sample"],
     }
-
-
-# Deprecated token-level helpers kept only so older imports fail less abruptly.
-def compute_token_utilities(*args, **kwargs):
-    raise RuntimeError("compute_token_utilities is deprecated; use block-level residual utilities instead.")
-
-
-def listwise_order_loss(*args, **kwargs):
-    raise RuntimeError("listwise_order_loss is deprecated; use listwise_block_order_loss instead.")

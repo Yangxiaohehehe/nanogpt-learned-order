@@ -14,6 +14,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from AOGPT import AOGPT, AOGPTConfig
 from order_utils import compute_prefix_auc, expand_block_orders_to_token_orders, token_losses_to_block_losses
+from path_layout import default_eval_out_file
 
 
 def parse_args():
@@ -21,7 +22,7 @@ def parse_args():
         description="Evaluate ordered two-block prefixes for an AO-GPT checkpoint."
     )
     parser.add_argument("--ckpt_path", type=Path, required=True)
-    parser.add_argument("--out_csv", type=Path, required=True)
+    parser.add_argument("--out_csv", type=Path, default=None)
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--data_dir", type=Path, default=None)
     parser.add_argument("--split", type=str, default="val", choices=["train", "val"])
@@ -218,6 +219,13 @@ def export_csv(rows, out_csv: Path):
 
 def main():
     args = parse_args()
+    if args.out_csv is None:
+        args.out_csv = default_eval_out_file(
+            REPO_ROOT,
+            args.ckpt_path,
+            "eval_prefix_pairs",
+            f"prefix_pairs_{args.suffix_mode}.csv",
+        )
     checkpoint = load_checkpoint(args.ckpt_path, args.device)
     data_dir = resolve_data_dir(args, checkpoint)
     _ = data_dir / "meta.pkl"

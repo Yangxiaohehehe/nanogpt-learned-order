@@ -19,6 +19,7 @@ from order_utils import (
     evaluate_block_order_quality,
     invert_permutation,
 )
+from path_layout import default_eval_out_dir
 
 
 def parse_args():
@@ -26,7 +27,7 @@ def parse_args():
         description="Sanity-check block permutation checkpoints by comparing current-frame and recovered-original l2r."
     )
     parser.add_argument("--ckpt_path", type=Path, required=True)
-    parser.add_argument("--out_dir", type=Path, required=True)
+    parser.add_argument("--out_dir", type=Path, default=None)
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--data_dir", type=Path, default=None)
     parser.add_argument("--split", type=str, default="val", choices=["train", "val"])
@@ -156,6 +157,8 @@ def summarize_order_metrics(model, tokens, order, args, token_perm, autocast_con
 
 def main():
     args = parse_args()
+    if args.out_dir is None:
+        args.out_dir = default_eval_out_dir(REPO_ROOT, args.ckpt_path, "block_permutation_sanity_check")
     checkpoint = load_checkpoint(args.ckpt_path, args.device)
     model = build_model(checkpoint, args.device)
     autocast_context = get_autocast_context(args.device, args.dtype)

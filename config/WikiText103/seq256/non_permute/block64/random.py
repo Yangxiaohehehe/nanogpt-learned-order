@@ -1,13 +1,13 @@
 # WikiText103 seq256 non-permuted RANDOM config for the 64-block setup (block_len=4).
 
-out_dir = 'out-wikitext103-seq256-random-b64'
+out_dir = 'out/base/nonpermute/seq256/block64/out-wikitext103-seq256-random-b64'
 eval_interval = 250
 eval_iters = 200
 log_interval = 10
 
 wandb_log = True
-wandb_project = 'ao-gpt-experiments-block-order-attn-64'
-wandb_run_name = 'wikitext103-seq256-random-b64'
+wandb_project = 'AOGPT-base-block'
+wandb_run_name = 'seq256-random-b64'
 
 dataset = 'wikitext103'
 batch_size = 64
@@ -27,14 +27,6 @@ n_embd = 256
 dropout = 0
 
 block_order_block_len = 4
-policy_prefix_k = 16
-utility_horizon = 16
-utility_alpha = 1.0
-utility_beta = 1.0
-baseline_momentum = 0.95
-lambda_list = 0.1
-order_temperature = 1.0
-order_entropy_temperature = 1.0
 
 learning_rate = 1e-3
 max_iters = 20000

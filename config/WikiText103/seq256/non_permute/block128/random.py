@@ -1,13 +1,13 @@
 # Stage 1: train the Random backbone for the 64-block setup (block_len=4).
 
-out_dir = 'out-wikitext103-random-b128-attn'
+out_dir = 'out/base/nonpermute/seq256/block128/out-wikitext103-random-b128-attn'
 eval_interval = 250
 eval_iters = 200
 log_interval = 10
 
 wandb_log = True
-wandb_project = 'ao-gpt-experiments-block-order-attn-pair-128'
-wandb_run_name = 'wikitext103-random-b128'
+wandb_project = 'AOGPT-base-block'
+wandb_run_name = 'seq256-random-b128'
 
 dataset = 'wikitext103'
 batch_size = 128
@@ -27,14 +27,6 @@ n_embd = 256
 dropout = 0
 
 block_order_block_len = 2
-policy_prefix_k = 16
-utility_horizon = 16
-utility_alpha = 1.0
-utility_beta = 1.0
-baseline_momentum = 0.95
-lambda_list = 0.1
-order_temperature = 1.0
-order_entropy_temperature = 1.0
 
 learning_rate = 1e-3
 max_iters = 20000

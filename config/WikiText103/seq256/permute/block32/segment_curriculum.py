@@ -4,8 +4,11 @@
 
 config = 'config/WikiText103/seq256/permute/block32/random.py'
 
-train_out_dir = 'out-wikitext103-seq256-random-b32-curriculum-permute-block'
-benchmark_root = 'Report/curriculum/seq256/permute/block32'
+train_out_dir = 'out/curriculum/permute/seq256/block32/out-wikitext103-seq256-random-b32-curriculum-permute-block'
+benchmark_root = 'Report/curriculum/permute/seq256/block32/block32'
+
+wandb_project = 'AOGPT-order-block'
+wandb_run_name = 'seq256-random-b32-permute-curriculum'
 
 warmup_iters = 7000
 stage_iters = 7000

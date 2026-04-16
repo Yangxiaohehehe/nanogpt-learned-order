@@ -237,6 +237,8 @@ def build_train_cmd(
     segment_top_k_pairs,
     segment_max_len,
     segment_max_units_per_order,
+    wandb_project=None,
+    wandb_run_name=None,
 ):
     cmd = [
         sys.executable,
@@ -252,7 +254,19 @@ def build_train_cmd(
     ]
     if segment_source_json:
         cmd.append(f"--segment_source_json={segment_source_json}")
+    if wandb_project:
+        cmd.append(f"--wandb_project={wandb_project}")
+    if wandb_run_name:
+        cmd.append(f"--wandb_run_name={wandb_run_name}")
     return cmd
+
+
+def build_stage_wandb_run_name(base_name, stage_idx):
+    if not base_name:
+        return None
+    if int(stage_idx) == 0:
+        return f"{base_name}-warmup"
+    return f"{base_name}-stage{int(stage_idx):02d}"
 
 
 def build_benchmark_cmd(
@@ -324,17 +338,38 @@ def parse_args():
     parser.add_argument(
         "--config",
         type=Path,
-        default=Path(config_ns.get("config", "config/WikiText103/block32/standard/random.py")),
+        default=Path(config_ns.get("config", "config/WikiText103/seq256/non_permute/block32/random.py")),
     )
     parser.add_argument(
         "--train_out_dir",
-        type=str,
-        default=config_ns.get("train_out_dir", "out-wikitext103-random-b32-curriculum"),
+        type=Path,
+        default=Path(
+            config_ns.get(
+                "train_out_dir",
+                "out/curriculum/nonpermute/seq256/block32/out-wikitext103-random-b32-curriculum",
+            )
+        ),
     )
     parser.add_argument(
         "--benchmark_root",
         type=Path,
-        default=Path(config_ns.get("benchmark_root", "Report/segment_curriculum_b32")),
+        default=Path(
+            config_ns.get(
+                "benchmark_root",
+                "Report/curriculum/nonpermute/seq256/block32/segment_curriculum_b32",
+            )
+        ),
+    )
+    parser.add_argument(
+        "--wandb_project",
+        type=str,
+        default=config_ns.get("wandb_project", None),
+    )
+    parser.add_argument(
+        "--wandb_run_name",
+        type=str,
+        default=config_ns.get("wandb_run_name", None),
+        help="Base W&B run name. Runner will expand it to -warmup / -stageXX.",
     )
     parser.add_argument("--warmup_iters", type=int, default=int(config_ns.get("warmup_iters", 4000)))
     parser.add_argument("--stage_iters", type=int, default=int(config_ns.get("stage_iters", 4000)))
@@ -403,10 +438,10 @@ def main():
     if len(segment_lens) != int(args.num_curriculum_stages):
         raise ValueError("segment_max_lens length must equal num_curriculum_stages")
 
-    train_out_dir = args.train_out_dir
+    train_out_dir = args.train_out_dir if args.train_out_dir.is_absolute() else REPO_ROOT / args.train_out_dir
     benchmark_root = args.benchmark_root if args.benchmark_root.is_absolute() else REPO_ROOT / args.benchmark_root
     benchmark_root.mkdir(parents=True, exist_ok=True)
-    ckpt_path = repo_dir / train_out_dir / "ckpt.pt"
+    ckpt_path = train_out_dir / "ckpt.pt"
 
     # Stage 0: pure-random warmup from scratch.
     run_command(
@@ -421,6 +456,8 @@ def main():
             segment_top_k_pairs=args.segment_top_k_pairs,
             segment_max_len=segment_lens[0],
             segment_max_units_per_order=args.segment_max_units_per_order,
+            wandb_project=args.wandb_project,
+            wandb_run_name=build_stage_wandb_run_name(args.wandb_run_name, stage_idx=0),
         ),
         cwd=repo_dir,
     )
@@ -469,6 +506,8 @@ def main():
                 segment_top_k_pairs=args.segment_top_k_pairs,
                 segment_max_len=segment_lens[stage_idx - 1],
                 segment_max_units_per_order=args.segment_max_units_per_order,
+                wandb_project=args.wandb_project,
+                wandb_run_name=build_stage_wandb_run_name(args.wandb_run_name, stage_idx=stage_idx),
             ),
             cwd=repo_dir,
         )
@@ -481,8 +520,10 @@ def main():
 
     final_payload = {
         "config": str(config_path),
-        "train_out_dir": train_out_dir,
+        "train_out_dir": str(train_out_dir),
         "benchmark_root": str(benchmark_root),
+        "wandb_project": args.wandb_project,
+        "wandb_run_name": args.wandb_run_name,
         "warmup_iters": int(args.warmup_iters),
         "stage_iters": int(args.stage_iters),
         "num_curriculum_stages": int(args.num_curriculum_stages),

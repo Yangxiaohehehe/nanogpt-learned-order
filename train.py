@@ -44,7 +44,7 @@ os.environ["WANDB_MODE"] = "online"
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
 # I/O
-out_dir = 'out'
+out_dir = 'out/manual/default'
 eval_interval = 2000
 log_interval = 1
 eval_iters = 200
