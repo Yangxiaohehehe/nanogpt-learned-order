@@ -1,3 +1,14 @@
+"""
+Purpose:
+Evaluate a fixed pool of candidate orders on one checkpoint and rank them with
+multiple trajectory metrics, producing leaderboard-style summaries.
+
+Typical usage:
+python scripts/benchmark/metric_candidate_leaderboard.py \
+  --ckpt_path out/out-wikitext103-random-b32/ckpt.pt \
+  --out_dir Report/leaderboards/metric_candidate_leaderboard_example
+"""
+
 import argparse
 import json
 from contextlib import nullcontext
@@ -17,6 +28,7 @@ from order_utils import (
     build_ascending_block_orders,
     build_fixed_block_permutation,
     evaluate_block_order_quality,
+    get_order_unit_name,
     invert_permutation,
 )
 
@@ -184,6 +196,7 @@ def main():
     data_dir = resolve_data_dir(args, checkpoint)
     tokens = load_tokens(data_dir, args.split)
     model = build_model(checkpoint, args.device)
+    unit_name = get_order_unit_name(model.block_order_block_len)
     rng = np.random.default_rng(args.seed)
     autocast_context = get_autocast_context(args.device, args.dtype)
     order_generator = torch.Generator(device="cuda" if "cuda" in args.device else "cpu")
@@ -327,6 +340,7 @@ def main():
         "seed": args.seed,
         "device": args.device,
         "dtype": args.dtype,
+        "order_unit": unit_name,
         "permute_data": bool(checkpoint.get("config", {}).get("permute_data", False)),
         "permute_mode": checkpoint.get("config", {}).get("permute_mode", ""),
         "permute_seed": checkpoint.get("config", {}).get("permute_seed", None),

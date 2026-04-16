@@ -1,3 +1,17 @@
+"""
+Purpose:
+Extract hidden-state-derived signatures for order units and use nearest-neighbor
+similarity in signature space to propose sparse top-k local pair candidates.
+
+Typical usage:
+python scripts/benchmark/trajectory_signature_proposal.py \
+  --ckpt_path out-wikitext103-random-b32-curriculum-permute-block/ckpt.pt \
+  --out_path Report/trajectory/trajectory_signature_proposal/example.json \
+  --raw_block_size 32 \
+  --num_batches 8 \
+  --batch_size 4
+"""
+
 import argparse
 import json
 from contextlib import nullcontext
@@ -13,7 +27,12 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from AOGPT import AOGPT, AOGPTConfig
-from order_utils import block_permutation_to_token_permutation, build_fixed_block_permutation, invert_permutation
+from order_utils import (
+    block_permutation_to_token_permutation,
+    build_fixed_block_permutation,
+    get_order_unit_name,
+    invert_permutation,
+)
 
 
 def parse_args():
@@ -29,7 +48,12 @@ def parse_args():
     parser.add_argument("--data_dir", type=Path, default=None)
     parser.add_argument("--split", type=str, default="val", choices=["train", "val"])
     parser.add_argument("--seq_len", type=int, default=None)
-    parser.add_argument("--raw_block_size", type=int, required=True)
+    parser.add_argument(
+        "--raw_block_size",
+        type=int,
+        default=None,
+        help="Evaluation unit size in tokens. Defaults to the checkpoint order unit size; token-level checkpoints therefore default to 1.",
+    )
     parser.add_argument("--mode", type=str, default="AR", choices=["AR", "Random"])
     parser.add_argument("--topk", type=int, default=4)
     parser.add_argument("--num_random_trials", type=int, default=1)
@@ -131,6 +155,12 @@ def validate_raw_block_layout(seq_len, raw_block_size):
             f"seq_len={seq_len} must be divisible by raw_block_size={raw_block_size}."
         )
     return seq_len // raw_block_size
+
+
+def resolve_raw_block_size(raw_block_size, model):
+    if raw_block_size is not None:
+        return int(raw_block_size)
+    return int(model.block_order_block_len)
 
 
 def load_block_permutation_from_checkpoint(checkpoint, seq_len, raw_block_size):
@@ -395,6 +425,8 @@ def main():
     save_samples = args.save_samples.lower() == "true"
     checkpoint = load_checkpoint(args.ckpt_path, args.device)
     model = build_model(checkpoint, args.device)
+    args.raw_block_size = resolve_raw_block_size(args.raw_block_size, model)
+    unit_name = get_order_unit_name(args.raw_block_size)
     seq_len = resolve_seq_len(args.seq_len, model)
     num_blocks = validate_raw_block_layout(seq_len, int(args.raw_block_size))
     autocast_context = get_autocast_context(args.device, args.dtype)
@@ -531,6 +563,7 @@ def main():
         "split": args.split,
         "seq_len": int(seq_len),
         "raw_block_size": int(args.raw_block_size),
+        "order_unit": unit_name,
         "num_blocks": int(num_blocks),
         "mode": args.mode,
         "topk": int(args.topk),

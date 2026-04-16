@@ -1,3 +1,16 @@
+"""
+Purpose:
+Run a proposal-method benchmark on frozen checkpoints: generate candidate
+predecessor->target edges with several proposal strategies, then validate those
+proposals with the existing pair-scoring logic.
+
+Typical usage:
+python scripts/benchmark/proposal_benchmark_runner.py \
+  --ckpt out-wikitext103-random-b32-curriculum/ckpt.pt \
+  --proposal full_enum,random,attn_early,loo_early \
+  --out_dir Report/trajectory/proposal_benchmark_example
+"""
+
 import argparse
 import csv
 import json

@@ -3,6 +3,17 @@ from contextlib import nullcontext
 import torch
 
 
+def get_order_unit_name(block_len, plural=False):
+    is_token_level = int(block_len) == 1
+    if plural:
+        return "tokens" if is_token_level else "blocks"
+    return "token" if is_token_level else "block"
+
+
+def get_order_unit_axis_label(block_len):
+    return f"Generate / Reveal {get_order_unit_name(block_len, plural=False).title()} Step"
+
+
 def _validate_block_layout(length, block_len):
     if length % block_len != 0:
         raise ValueError(f"Length {length} is not divisible by block_len={block_len}.")
@@ -70,6 +81,10 @@ def token_losses_to_block_losses(token_losses, block_len=16):
     batch_size, seq_len = token_losses.shape
     num_blocks = _validate_block_layout(seq_len, block_len)
     return token_losses.float().view(batch_size, num_blocks, block_len).mean(dim=-1)
+
+
+def aggregate_token_losses_by_order_units(token_losses, block_len=16):
+    return token_losses_to_block_losses(token_losses, block_len=block_len)
 
 
 def compute_prefix_auc(step_losses, k):

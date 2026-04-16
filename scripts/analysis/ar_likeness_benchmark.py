@@ -1,3 +1,14 @@
+"""
+Purpose:
+Benchmark how "AR-like" a checkpoint's reveal trajectory is by comparing
+AR rollouts against Random rollouts over many sampled sequences.
+
+Typical usage:
+python scripts/analysis/ar_likeness_benchmark.py \
+  --ckpt_paths out/out-wikitext103-random-b32/ckpt.pt \
+  --out_dir Report/analysis/ar_likeness_benchmark_example
+"""
+
 import argparse
 import json
 from contextlib import nullcontext
@@ -12,7 +23,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from AOGPT import AOGPT, AOGPTConfig
-from order_utils import token_losses_to_block_losses
+from order_utils import get_order_unit_name, token_losses_to_block_losses
 
 
 def parse_args():
@@ -242,6 +253,7 @@ def main():
         data_dir = resolve_data_dir(args, checkpoint)
         tokens = load_tokens(data_dir, args.split)
         model = build_model(checkpoint, args.device)
+        unit_name = get_order_unit_name(model.block_order_block_len)
 
         ar_components_all = {}
         random_components_all = {}
@@ -368,6 +380,7 @@ def main():
                 "seed": args.seed,
                 "device": args.device,
                 "dtype": args.dtype,
+                "order_unit": unit_name,
                 "evaluation_policy": {
                     "goal": "Check whether AR trajectories score higher than Random trajectories.",
                     "note": (

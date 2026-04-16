@@ -1,3 +1,15 @@
+"""
+Purpose:
+Sanity-check a permuted-data checkpoint by comparing current-frame l2r against
+the l2r order recovered back into the original frame, verifying that the saved
+permutation metadata is behaving as expected.
+
+Typical usage:
+python scripts/eval/block_permutation_sanity_check.py \
+  --ckpt_path out-wikitext103-random-b32-curriculum-permute-block/ckpt.pt \
+  --out_dir Report/eval/block_permutation_sanity_example
+"""
+
 import argparse
 import json
 from contextlib import nullcontext
@@ -17,6 +29,7 @@ from order_utils import (
     build_ascending_block_orders,
     build_fixed_block_permutation,
     evaluate_block_order_quality,
+    get_order_unit_name,
     invert_permutation,
 )
 from path_layout import default_eval_out_dir
@@ -161,6 +174,7 @@ def main():
         args.out_dir = default_eval_out_dir(REPO_ROOT, args.ckpt_path, "block_permutation_sanity_check")
     checkpoint = load_checkpoint(args.ckpt_path, args.device)
     model = build_model(checkpoint, args.device)
+    unit_name = get_order_unit_name(model.block_order_block_len)
     autocast_context = get_autocast_context(args.device, args.dtype)
     data_dir = resolve_data_dir(args, checkpoint)
     tokens = load_tokens(data_dir, args.split)
@@ -208,6 +222,7 @@ def main():
             "seed": int(args.seed),
             "num_blocks": int(model.num_blocks),
             "block_order_block_len": int(model.block_order_block_len),
+            "order_unit": unit_name,
         },
         "block_perm": [int(v) for v in block_perm.tolist()],
         "inverse_block_perm": [int(v) for v in inverse_block_perm.tolist()],

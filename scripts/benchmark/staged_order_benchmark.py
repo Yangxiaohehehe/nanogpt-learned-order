@@ -1,3 +1,16 @@
+"""
+Purpose:
+Benchmark staged order construction strategies such as prefix-only,
+suffix-only, and two-stage construction, using rollout-based scoring to choose
+better order prefixes and completions.
+
+Typical usage:
+python scripts/benchmark/staged_order_benchmark.py \
+  --experiment prefix_only \
+  --ckpt_path out/out-wikitext103-random-b32/ckpt.pt \
+  --out_dir Report/staged/staged_prefix_only_example
+"""
+
 import argparse
 import json
 from contextlib import nullcontext

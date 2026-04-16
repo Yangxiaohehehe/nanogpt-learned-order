@@ -1,3 +1,15 @@
+"""
+Purpose:
+Main checkpoint evaluation entrypoint. Compare one AO-GPT checkpoint under
+multiple order modes such as AR, Random, Swap, and for permuted-data checkpoints
+also original-frame l2r recovered into the current frame.
+
+Typical usage:
+python scripts/eval/eval_ckpt_modes.py \
+  --ckpt_path out-wikitext103-random-b32-curriculum/ckpt.pt \
+  --out_dir Report/eval/eval_ckpt_modes_b32_example
+"""
+
 import argparse
 import csv
 import json
@@ -20,6 +32,8 @@ from order_utils import (
     block_permutation_to_token_permutation,
     build_fixed_block_permutation,
     expand_block_orders_to_token_orders,
+    get_order_unit_axis_label,
+    get_order_unit_name,
     invert_permutation,
     token_losses_to_block_losses,
 )
@@ -357,6 +371,7 @@ def swap_label(swap_pair: Tuple[int, int]) -> str:
 
 def save_csv(
     out_dir: Path,
+    unit_name: str,
     ar_mean,
     ar_std,
     swap_curves,
@@ -371,7 +386,7 @@ def save_csv(
     seed_columns = [f"random_seed_{seed}" for seed in random_seed_curves]
     with csv_path.open("w", newline="") as handle:
         writer = csv.writer(handle)
-        header = ["block_position", "ar_mean", "ar_std"]
+        header = [f"{unit_name}_position", "ar_mean", "ar_std"]
         if original_ar_mean is not None:
             header.extend(["original_position_ar_mean", "original_position_ar_std"])
         header.extend([*swap_columns, *seed_columns, "random_mean", "random_std"])
@@ -394,6 +409,7 @@ def save_csv(
 
 def save_metric_csv(
     out_dir: Path,
+    unit_name: str,
     metric_name: str,
     ar_mean,
     ar_std,
@@ -409,7 +425,7 @@ def save_metric_csv(
     seed_columns = [f"random_seed_{seed}" for seed in random_seed_curves]
     with csv_path.open("w", newline="") as handle:
         writer = csv.writer(handle)
-        header = ["block_position", "ar_mean", "ar_std"]
+        header = [f"{unit_name}_position", "ar_mean", "ar_std"]
         if original_ar_mean is not None:
             header.extend(["original_position_ar_mean", "original_position_ar_std"])
         header.extend([*swap_columns, *seed_columns, "random_mean", "random_std"])
@@ -432,6 +448,7 @@ def save_metric_csv(
 
 def plot_curves(
     out_dir: Path,
+    unit_axis_label: str,
     ar_mean,
     ar_std,
     swap_curves,
@@ -457,7 +474,7 @@ def plot_curves(
         ax.plot(x, curve, linewidth=1.75, alpha=0.9, linestyle="--", label=label)
     for seed, curve in random_seed_curves.items():
         ax.plot(x, curve, linewidth=1.5, alpha=0.8, label=f"Random (seed={seed})")
-    ax.set_xlabel("Block Reveal Step")
+    ax.set_xlabel(unit_axis_label)
     ax.set_ylabel("Cross-Entropy Loss")
     ax.set_title(title)
     ax.legend(ncol=2, fontsize=9)
@@ -476,7 +493,7 @@ def plot_curves(
         ax.plot(x, curve, linewidth=1.5, linestyle="--", label=label)
     ax.plot(x, random_mean, label="Random mean", linewidth=2)
     ax.fill_between(x, random_mean - random_std, random_mean + random_std, alpha=0.2)
-    ax.set_xlabel("Block Reveal Step")
+    ax.set_xlabel(unit_axis_label)
     ax.set_ylabel("Cross-Entropy Loss")
     ax.set_title(f"{title} (AR batch std, Random seed std)")
     ax.legend()
@@ -488,6 +505,7 @@ def plot_curves(
 
 def plot_metric_curves(
     out_dir: Path,
+    unit_axis_label: str,
     metric_name: str,
     metric_label: str,
     ar_mean,
@@ -515,7 +533,7 @@ def plot_metric_curves(
         ax.plot(x, curve, linewidth=1.75, alpha=0.9, linestyle="--", label=label)
     for seed, curve in random_seed_curves.items():
         ax.plot(x, curve, linewidth=1.5, alpha=0.8, label=f"Random (seed={seed})")
-    ax.set_xlabel("Block Reveal Step")
+    ax.set_xlabel(unit_axis_label)
     ax.set_ylabel(metric_label)
     ax.set_title(title)
     ax.legend(ncol=2, fontsize=9)
@@ -534,7 +552,7 @@ def plot_metric_curves(
         ax.plot(x, curve, linewidth=1.5, linestyle="--", label=label)
     ax.plot(x, random_mean, label="Random mean", linewidth=2)
     ax.fill_between(x, random_mean - random_std, random_mean + random_std, alpha=0.2)
-    ax.set_xlabel("Block Reveal Step")
+    ax.set_xlabel(unit_axis_label)
     ax.set_ylabel(metric_label)
     ax.set_title(f"{title} (AR batch std, Random seed std)")
     ax.legend()
@@ -545,6 +563,7 @@ def plot_metric_curves(
 
 
 def save_summary(out_dir: Path, config: EvalConfig, checkpoint: Dict, random_seeds, ar_mean, random_mean, original_ar_mean=None):
+    block_len = int(checkpoint["model_args"].get("block_order_block_len", 1))
     modes = ["AR"]
     if config.swap_pairs:
         modes.append("Swap")
@@ -556,6 +575,8 @@ def save_summary(out_dir: Path, config: EvalConfig, checkpoint: Dict, random_see
         "split": config.split,
         "batch_size": config.batch_size,
         "block_size": config.block_size,
+        "order_unit": get_order_unit_name(block_len),
+        "order_unit_count": int(config.block_size // block_len),
         "num_batches": config.num_batches,
         "num_random_seeds": config.num_random_seeds,
         "swap_pairs": [list(pair) for pair in config.swap_pairs],
@@ -614,6 +635,8 @@ def run_evaluation(config: EvalConfig):
     config.out_dir.mkdir(parents=True, exist_ok=True)
 
     model, checkpoint = load_model(config.ckpt_path, config.device)
+    unit_name = get_order_unit_name(model.block_order_block_len)
+    unit_axis_label = get_order_unit_axis_label(model.block_order_block_len)
     config.block_size = resolve_block_size(config, checkpoint)
     config.swap_pairs = normalize_swap_pairs(config.swap_pairs, model.num_blocks)
     data_dir = resolve_data_dir(config, checkpoint)
@@ -788,6 +811,7 @@ def run_evaluation(config: EvalConfig):
 
     save_csv(
         config.out_dir,
+        unit_name,
         ar_mean,
         ar_std,
         swap_curves,
@@ -800,18 +824,20 @@ def run_evaluation(config: EvalConfig):
     save_order_distance_csv(config.out_dir, order_distance_to_ar)
     plot_curves(
         config.out_dir,
+        unit_axis_label,
         ar_mean,
         ar_std,
         swap_curves,
         random_seed_curves,
         random_mean,
         random_std,
-        title=f"Per-Step Loss Comparison ({config.num_batches} batches, {config.num_random_seeds} random seeds)",
+        title=f"Per-Step {unit_name.title()} Loss Comparison ({config.num_batches} batches, {config.num_random_seeds} random seeds)",
         original_ar_mean=None if original_ar_metrics is None else original_ar_metrics["loss"][0],
         original_ar_std=None if original_ar_metrics is None else original_ar_metrics["loss"][1],
     )
     save_metric_csv(
         config.out_dir,
+        unit_name,
         "target_prob",
         ar_metrics["target_prob"][0],
         ar_metrics["target_prob"][1],
@@ -824,6 +850,7 @@ def run_evaluation(config: EvalConfig):
     )
     save_metric_csv(
         config.out_dir,
+        unit_name,
         "max_prob",
         ar_metrics["max_prob"][0],
         ar_metrics["max_prob"][1],
@@ -836,6 +863,7 @@ def run_evaluation(config: EvalConfig):
     )
     save_metric_csv(
         config.out_dir,
+        unit_name,
         "entropy",
         ar_metrics["entropy"][0],
         ar_metrics["entropy"][1],
@@ -848,6 +876,7 @@ def run_evaluation(config: EvalConfig):
     )
     plot_metric_curves(
         config.out_dir,
+        unit_axis_label,
         "target_prob",
         "Average True-Token Probability",
         ar_metrics["target_prob"][0],
@@ -856,12 +885,13 @@ def run_evaluation(config: EvalConfig):
         random_metric_curves["target_prob"],
         target_prob_mean,
         target_prob_std,
-        title=f"Per-Block True-Token Probability ({config.num_batches} batches, {config.num_random_seeds} random seeds)",
+        title=f"Per-{unit_name.title()} True-Token Probability ({config.num_batches} batches, {config.num_random_seeds} random seeds)",
         original_ar_mean=None if original_ar_metrics is None else original_ar_metrics["target_prob"][0],
         original_ar_std=None if original_ar_metrics is None else original_ar_metrics["target_prob"][1],
     )
     plot_metric_curves(
         config.out_dir,
+        unit_axis_label,
         "max_prob",
         "Average Max Probability",
         ar_metrics["max_prob"][0],
@@ -870,12 +900,13 @@ def run_evaluation(config: EvalConfig):
         random_metric_curves["max_prob"],
         max_prob_mean,
         max_prob_std,
-        title=f"Per-Block Max Probability ({config.num_batches} batches, {config.num_random_seeds} random seeds)",
+        title=f"Per-{unit_name.title()} Max Probability ({config.num_batches} batches, {config.num_random_seeds} random seeds)",
         original_ar_mean=None if original_ar_metrics is None else original_ar_metrics["max_prob"][0],
         original_ar_std=None if original_ar_metrics is None else original_ar_metrics["max_prob"][1],
     )
     plot_metric_curves(
         config.out_dir,
+        unit_axis_label,
         "entropy",
         "Average Predictive Entropy",
         ar_metrics["entropy"][0],
@@ -884,7 +915,7 @@ def run_evaluation(config: EvalConfig):
         random_metric_curves["entropy"],
         entropy_mean,
         entropy_std,
-        title=f"Per-Block Predictive Entropy ({config.num_batches} batches, {config.num_random_seeds} random seeds)",
+        title=f"Per-{unit_name.title()} Predictive Entropy ({config.num_batches} batches, {config.num_random_seeds} random seeds)",
         original_ar_mean=None if original_ar_metrics is None else original_ar_metrics["entropy"][0],
         original_ar_std=None if original_ar_metrics is None else original_ar_metrics["entropy"][1],
     )

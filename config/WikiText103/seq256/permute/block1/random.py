@@ -1,13 +1,13 @@
 # WikiText103 seq256 permuted RANDOM config for the token-level setup (block_len=1).
 
-out_dir = 'out/base/permute/seq256/block1/out-wikitext103-seq256-random-b1-permute-block'
+out_dir = 'out/base/permute/seq256/block1/out-wikitext103-seq256-random-b1-permute-block-6-8-256'
 eval_interval = 250
 eval_iters = 200
 log_interval = 10
 
 wandb_log = True
 wandb_project = 'AOGPT-base-block'
-wandb_run_name = 'seq256-random-b1-permute'
+wandb_run_name = 'seq256-random-b1-permute-6-8-256'
 
 dataset = 'wikitext103'
 batch_size = 64
@@ -23,9 +23,9 @@ aogpt_train_mode = 'Random'
 main_eval_mode = 'Random'
 generalization_eval_mode = ''
 order_impl = 'token'
-n_layer = 3
+n_layer = 6
 n_head = 8
-n_embd = 256
+n_embd = 512
 dropout = 0
 
 block_order_block_len = 1

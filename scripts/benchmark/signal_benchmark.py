@@ -1,3 +1,15 @@
+"""
+Purpose:
+Benchmark heuristic order signals by using each signal to guide local search
+over candidate order edits, then measuring whether the resulting orders improve
+relative to l2r-oriented evaluation metrics.
+
+Typical usage:
+python scripts/benchmark/signal_benchmark.py \
+  --ckpt_path out-wikitext103-random/ckpt.pt \
+  --out_dir Report/analysis/signal_benchmark_example
+"""
+
 import argparse
 import json
 from contextlib import nullcontext
@@ -15,6 +27,7 @@ from AOGPT import AOGPT, AOGPTConfig
 from order_utils import (
     evaluate_block_order_quality,
     generate_adjacent_swap_candidates,
+    get_order_unit_name,
     prefix_position_stats,
     token_losses_to_block_losses,
 )
@@ -444,6 +457,7 @@ def main():
     data_dir = resolve_data_dir(args, checkpoint)
     tokens = load_tokens(data_dir, args.split)
     model = build_model(checkpoint, args.device)
+    unit_name = get_order_unit_name(model.block_order_block_len)
     autocast_context = get_autocast_context(args.device, args.dtype)
     rng = np.random.default_rng(args.seed)
     order_generator = torch.Generator(device="cuda" if "cuda" in args.device else "cpu")
@@ -555,6 +569,7 @@ def main():
         "seed": args.seed,
         "device": args.device,
         "dtype": args.dtype,
+        "order_unit": unit_name,
         "signals": [name for name, _ in signal_specs],
         "evaluation_policy": {
             "primary_metric": "kendall_distance",

@@ -1,3 +1,15 @@
+"""
+Purpose:
+Evaluate a permuted-data checkpoint with per-step loss curves for Random mode,
+current-frame l2r, and original-frame l2r mapped back into the checkpoint's
+current frame.
+
+Typical usage:
+python scripts/eval/permuted_ckpt_generate_step_eval.py \
+  --ckpt_path out-wikitext103-random-b32-curriculum-permute-block/ckpt.pt \
+  --out_dir Report/eval/eval_pic_b32_permute_block_example
+"""
+
 import argparse
 import json
 from contextlib import nullcontext
@@ -17,6 +29,8 @@ from order_utils import (
     build_ascending_block_orders,
     build_fixed_block_permutation,
     evaluate_block_order_quality,
+    get_order_unit_axis_label,
+    get_order_unit_name,
     invert_permutation,
     token_losses_to_block_losses,
 )
@@ -126,7 +140,7 @@ def sample_batch(tokens, batch_size: int, block_size: int, rng, device: str, tok
     return batch
 
 
-def build_curve_figure(curve, title, output_path: Path):
+def build_curve_figure(curve, title, xlabel: str, ylabel: str, output_path: Path):
     import matplotlib
 
     matplotlib.use("Agg")
@@ -136,8 +150,8 @@ def build_curve_figure(curve, title, output_path: Path):
     steps = np.arange(len(curve))
     ax.plot(steps, curve, linewidth=2.0)
     ax.set_title(title)
-    ax.set_xlabel("Generate / Reveal Block Step")
-    ax.set_ylabel("Mean Block Loss")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     ax.grid(alpha=0.25)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
@@ -154,6 +168,8 @@ def main():
     model = build_model(checkpoint, args.device)
     autocast_context = get_autocast_context(args.device, args.dtype)
     rng = np.random.default_rng(12345)
+    unit_name = get_order_unit_name(model.block_order_block_len)
+    unit_axis_label = get_order_unit_axis_label(model.block_order_block_len)
 
     num_blocks = model.num_blocks
     permutation_state = load_block_permutation_from_checkpoint(
@@ -225,18 +241,24 @@ def main():
     args.out_dir.mkdir(parents=True, exist_ok=True)
     build_curve_figure(
         random_curve,
-        f"{args.split} mean per-step block loss: Random mode ({args.num_batches} batches)",
+        f"{args.split} mean per-step {unit_name} loss: Random mode ({args.num_batches} batches)",
+        unit_axis_label,
+        f"Mean {unit_name.title()} Loss",
         args.out_dir / "random_generate_step_block_loss.png",
     )
     build_curve_figure(
         current_l2r_curve,
-        f"{args.split} mean per-step block loss: Current-frame l2r ({args.num_batches} batches)",
+        f"{args.split} mean per-step {unit_name} loss: Current-frame l2r ({args.num_batches} batches)",
+        unit_axis_label,
+        f"Mean {unit_name.title()} Loss",
         args.out_dir / "current_l2r_block_loss.png",
     )
     if original_l2r_curve is not None:
         build_curve_figure(
             original_l2r_curve,
-            f"{args.split} mean per-step block loss: Original-frame l2r mapped into current frame ({args.num_batches} batches)",
+            f"{args.split} mean per-step {unit_name} loss: Original-frame l2r mapped into current frame ({args.num_batches} batches)",
+            unit_axis_label,
+            f"Mean {unit_name.title()} Loss",
             args.out_dir / "original_l2r_in_current_frame_block_loss.png",
         )
 
@@ -249,6 +271,7 @@ def main():
             "num_batches": int(args.num_batches),
             "device": args.device,
             "dtype": args.dtype,
+            "order_unit": unit_name,
             "num_blocks": int(num_blocks),
             "permute_data": bool(checkpoint.get("config", {}).get("permute_data", False)),
             "permute_mode": checkpoint.get("config", {}).get("permute_mode", ""),

@@ -1,3 +1,14 @@
+"""
+Purpose:
+Evaluate fixed two-unit prefixes for an AO-GPT checkpoint, ranking which
+ordered prefix pairs produce better early reveal trajectories.
+
+Typical usage:
+python scripts/eval/eval_prefix_pairs.py \
+  --ckpt_path out/out-wikitext103-random-b32/ckpt.pt \
+  --out_csv Report/eval/prefix_pairs_b32.csv
+"""
+
 import argparse
 import csv
 import pickle
@@ -13,13 +24,18 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from AOGPT import AOGPT, AOGPTConfig
-from order_utils import compute_prefix_auc, expand_block_orders_to_token_orders, token_losses_to_block_losses
+from order_utils import (
+    compute_prefix_auc,
+    expand_block_orders_to_token_orders,
+    get_order_unit_name,
+    token_losses_to_block_losses,
+)
 from path_layout import default_eval_out_file
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Evaluate ordered two-block prefixes for an AO-GPT checkpoint."
+        description="Evaluate ordered two-unit prefixes for an AO-GPT checkpoint."
     )
     parser.add_argument("--ckpt_path", type=Path, required=True)
     parser.add_argument("--out_csv", type=Path, default=None)
@@ -192,11 +208,14 @@ def evaluate_pair(
 def export_csv(rows, out_csv: Path):
     rows = sorted(rows, key=lambda row: (row["prefix2_auc"], row["prefix4_auc"], row["full_loss"]))
     out_csv.parent.mkdir(parents=True, exist_ok=True)
+    unit_name = str(rows[0].get("unit_name", "block")) if rows else "block"
     with out_csv.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(
             [
                 "rank",
+                f"first_{unit_name}",
+                f"second_{unit_name}",
                 "first_block",
                 "second_block",
                 "prefix2_auc",
@@ -208,6 +227,8 @@ def export_csv(rows, out_csv: Path):
             writer.writerow(
                 [
                     int(rank),
+                    int(row["first_unit"]),
+                    int(row["second_unit"]),
                     int(row["first_block"]),
                     int(row["second_block"]),
                     float(row["prefix2_auc"]),
@@ -232,6 +253,7 @@ def main():
     tokens = load_tokens(data_dir, args.split)
     model = build_model(checkpoint, args.device)
     autocast_context = get_autocast_context(args.device, args.dtype)
+    unit_name = get_order_unit_name(model.block_order_block_len)
 
     rows = []
     for first_block in range(model.num_blocks):
@@ -252,6 +274,9 @@ def main():
             )
             rows.append(
                 {
+                    "unit_name": unit_name,
+                    "first_unit": first_block,
+                    "second_unit": second_block,
                     "first_block": first_block,
                     "second_block": second_block,
                     **metrics,

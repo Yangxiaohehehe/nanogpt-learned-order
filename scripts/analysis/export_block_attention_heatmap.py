@@ -450,6 +450,97 @@ def get_frame_metadata(frame: str, data_permutation):
     raise ValueError(f"Unsupported frame: {frame}")
 
 
+def get_export_layout(args, data_permutation):
+    is_permuted = data_permutation is not None
+    if not is_permuted:
+        if args.mode == "Random":
+            # One Random reveal run, then export both the raw reveal view and the
+            # same matrix reordered back to current l2r.
+            return {
+                "frames_to_export": ("reveal", "original"),
+                "frame_dir_names": {
+                    "reveal": "random",
+                    "original": "current_l2r",
+                },
+                "readme_lines": [
+                    "Inside each top-level group:",
+                    "",
+                    "- `random/`: reveal-order view from a single Random rollout average",
+                    "- `current_l2r/`: the same Random-rollout matrix reordered back to current l2r order",
+                    "",
+                    "Important note:",
+                    "",
+                    "- this does not run a second l2r forward pass",
+                    "- `current_l2r/` is only a coordinate remapping of the Random attention result",
+                ],
+            }
+
+        # Match block_attention_ar_all style: no extra frame subdirs.
+        return {
+            "frames_to_export": ("reveal",),
+            "frame_dir_names": {"reveal": None},
+            "readme_lines": [
+                "Inside each top-level group:",
+                "",
+                "- files are exported directly at that level because current-frame reveal order is the canonical view",
+            ],
+        }
+
+    if args.mode == "AR":
+        # Match block_attention_b32_permute_block_ar style.
+        return {
+            "frames_to_export": ("reveal", "true_original"),
+            "frame_dir_names": {
+                "reveal": "current_frame",
+                "true_original": "true_original",
+            },
+            "readme_lines": [
+                "Inside each top-level group:",
+                "",
+                "- `current_frame/`: canonical current-frame view kept from the `reveal` export",
+                "- `true_original/`: block matrix mapped back to the true unpermuted data block order",
+                "",
+                "`original` in the current permuted input frame is omitted here because under `mode=AR` it is",
+                "effectively redundant with the canonical current-frame view for quick inspection.",
+            ],
+        }
+
+    # Match block_attention_b32_permute_block_random style.
+    return {
+        "frames_to_export": ("reveal", "original", "true_original"),
+        "frame_dir_names": {
+            "reveal": "reveal",
+            "original": "current_original",
+            "true_original": "true_original",
+        },
+        "readme_lines": [
+            "Inside each top-level group:",
+            "",
+            "- `reveal/`: reveal-order block coordinates in the current permuted input frame",
+            "- `current_original/`: reordered back to the original block order of the current permuted input frame",
+            "- `true_original/`: reordered further back to the true unpermuted data block order",
+        ],
+    }
+
+
+def write_readme(out_dir: Path, args, data_permutation, layout):
+    lines = [
+        f"# {out_dir.name}",
+        "",
+        "This directory stores block-attention analysis for the checkpoint",
+        f"`{args.ckpt_path}` evaluated with `mode={args.mode}`.",
+        "",
+        "Top-level groups:",
+        "",
+        "- `with_none/`: predictor-aligned block attention including `[None]`",
+        "- `without_none/`: real-token-only block attention excluding `[None]`",
+        "- `diff/`: `with_none - without_none`",
+        "",
+        *layout["readme_lines"],
+    ]
+    (out_dir / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def save_heatmap_png(matrix, out_path: Path, title: str, *, cmap="viridis", vmin=None, vmax=None):
     try:
         import matplotlib.pyplot as plt
@@ -484,7 +575,9 @@ def export_results(
         raise RuntimeError("No attention matrices were aggregated.")
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    export_frames = get_export_frames(data_permutation)
+    layout = get_export_layout(args, data_permutation)
+    export_frames = layout["frames_to_export"]
+    write_readme(args.out_dir, args, data_permutation, layout)
 
     diff_abs_max = max(
         float((matrix_sums["diff"][frame] / total_samples).abs().max().item())
@@ -496,8 +589,14 @@ def export_results(
         for frame in export_frames:
             matrix = matrix_sums[export_type][frame] / total_samples
 
-            base_name = f"block_attention_{export_type}_{frame}"
-            np.save(args.out_dir / f"{base_name}.npy", matrix.numpy())
+            frame_dir_name = layout["frame_dir_names"][frame]
+            target_dir = args.out_dir / export_type
+            if frame_dir_name is not None:
+                target_dir = target_dir / frame_dir_name
+            target_dir.mkdir(parents=True, exist_ok=True)
+
+            base_name = f"block_attention_{export_type}"
+            np.save(target_dir / f"{base_name}.npy", matrix.numpy())
 
             metadata = {
                 "ckpt_path": str(args.ckpt_path),
@@ -537,7 +636,7 @@ def export_results(
                     "inverse_block_perm": data_permutation["inverse_block_perm"].tolist(),
                 }
 
-            (args.out_dir / f"{base_name}_metadata.json").write_text(
+            (target_dir / f"{base_name}_metadata.json").write_text(
                 json.dumps(metadata, indent=2),
                 encoding="utf-8",
             )
@@ -545,7 +644,7 @@ def export_results(
             if export_type == "diff":
                 png_ok = save_heatmap_png(
                     matrix.numpy(),
-                    args.out_dir / f"{base_name}.png",
+                    target_dir / f"{base_name}.png",
                     title=f"block attention diff | mode={args.mode} | frame={frame}",
                     cmap="coolwarm",
                     vmin=-diff_abs_max,
@@ -554,14 +653,14 @@ def export_results(
             else:
                 png_ok = save_heatmap_png(
                     matrix.numpy(),
-                    args.out_dir / f"{base_name}.png",
+                    target_dir / f"{base_name}.png",
                     title=f"block attention {export_type} | mode={args.mode} | frame={frame}",
                 )
 
             if png_ok:
-                print(f"saved heatmap png to {args.out_dir / f'{base_name}.png'}")
+                print(f"saved heatmap png to {target_dir / f'{base_name}.png'}")
             else:
-                print(f"matplotlib not installed; skipped png export for {base_name}")
+                print(f"matplotlib not installed; skipped png export for {target_dir / base_name}")
 
 
 def main():

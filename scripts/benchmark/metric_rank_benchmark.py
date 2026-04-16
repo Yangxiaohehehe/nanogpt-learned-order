@@ -1,3 +1,14 @@
+"""
+Purpose:
+Compare how different order-quality metrics rank the same sampled candidate
+orders, measuring ranking consistency and top-set overlap across metrics.
+
+Typical usage:
+python scripts/benchmark/metric_rank_benchmark.py \
+  --ckpt_path out/out-wikitext103-random-b32/ckpt.pt \
+  --out_dir Report/leaderboards/metric_rank_benchmark_example
+"""
+
 import argparse
 import json
 from contextlib import nullcontext
@@ -12,7 +23,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from AOGPT import AOGPT, AOGPTConfig
-from order_utils import evaluate_block_order_quality
+from order_utils import evaluate_block_order_quality, get_order_unit_name
 
 
 def parse_args():
@@ -162,6 +173,7 @@ def main():
     data_dir = resolve_data_dir(args, checkpoint)
     tokens = load_tokens(data_dir, args.split)
     model = build_model(checkpoint, args.device)
+    unit_name = get_order_unit_name(model.block_order_block_len)
     rng = np.random.default_rng(args.seed)
     autocast_context = get_autocast_context(args.device, args.dtype)
     order_generator = torch.Generator(device="cuda" if "cuda" in args.device else "cpu")
@@ -279,6 +291,7 @@ def main():
         "seed": args.seed,
         "device": args.device,
         "dtype": args.dtype,
+        "order_unit": unit_name,
         "note": (
             "Top-25% means the top candidate orders under each metric among randomly sampled candidate orders. "
             "This is a ranking-consistency analysis, not a training signal."

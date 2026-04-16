@@ -1,3 +1,16 @@
+"""
+Purpose:
+Scan a directory of early training checkpoints, repeatedly run signal-related
+benchmark scripts on selected steps, and collect outputs for early-stage trend
+analysis.
+
+Typical usage:
+python scripts/runner/early_signal_scan.py \
+  --checkpoint_dir out-wikitext103-random-b32-early-scan/checkpoints \
+  --out_root Report/analysis/early_signal_scan_b32 \
+  --steps 500,1000,1500,2000
+"""
+
 import argparse
 import json
 import re

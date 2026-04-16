@@ -1,3 +1,14 @@
+"""
+Purpose:
+Orchestrate a multi-stage segment-curriculum workflow, typically including
+warmup/base training, structure mining or benchmarking, and resume/follow-up
+training stages driven by the mined curriculum signal.
+
+Typical usage:
+python scripts/runner/segment_curriculum_runner.py \
+  config/WikiText103/block32/standard/segment_curriculum.py
+"""
+
 import argparse
 import json
 import shlex

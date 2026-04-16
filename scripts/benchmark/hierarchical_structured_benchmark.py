@@ -1,3 +1,15 @@
+"""
+Purpose:
+Mine local pair structure hierarchically: first discover good low-level unit
+pairs, merge them into segments, then recurse on the segments as higher-level
+units to evaluate hierarchical structured order candidates.
+
+Typical usage:
+python scripts/benchmark/hierarchical_structured_benchmark.py \
+  --ckpt_path out/out-wikitext103-random-b32/ckpt.pt \
+  --out_dir Report/structured/hierarchical_structured_benchmark_b32_example
+"""
+
 import argparse
 import json
 from contextlib import nullcontext

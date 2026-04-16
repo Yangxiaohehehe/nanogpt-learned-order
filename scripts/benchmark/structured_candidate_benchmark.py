@@ -1,3 +1,15 @@
+"""
+Purpose:
+Mine local pair structure from a checkpoint, aggregate that structure into
+segments/chains, build a structured candidate order pool, and compare those
+candidates against random and l2r-style baselines.
+
+Typical usage:
+python scripts/benchmark/structured_candidate_benchmark.py \
+  --ckpt_path out/out-wikitext103-random-b32/ckpt.pt \
+  --out_dir Report/structured/structured_candidate_benchmark_b32_example
+"""
+
 import argparse
 import json
 from contextlib import nullcontext
