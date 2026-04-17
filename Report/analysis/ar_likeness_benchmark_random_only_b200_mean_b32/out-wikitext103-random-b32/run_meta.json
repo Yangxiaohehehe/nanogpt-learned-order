@@ -1,0 +1,16 @@
+{
+  "ckpt_path": "out-wikitext103-random-b32/ckpt.pt",
+  "dataset": "wikitext103",
+  "split": "val",
+  "batch_size": 16,
+  "num_batches": 200,
+  "num_random_rollouts": 8,
+  "early_k": 4,
+  "seed": 12345,
+  "device": "cuda",
+  "dtype": "bfloat16",
+  "evaluation_policy": {
+    "goal": "Check whether AR trajectories score higher than Random trajectories.",
+    "note": "These AR-likeness scores are evaluation-only and must not be used directly as training targets or propagated supervision signals."
+  }
+}

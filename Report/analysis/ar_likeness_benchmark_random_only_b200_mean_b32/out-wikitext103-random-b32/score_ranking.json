@@ -1,0 +1,147 @@
+[
+  {
+    "score_name": "area_plus_slope",
+    "weights": {
+      "early_area": -1.0,
+      "early_slope": 1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.3538440763950348,
+    "random_mean": -0.3538443446159363,
+    "margin_mean": 0.7076883912086487,
+    "margin_std": 1.7968850135803223,
+    "ar_win_rate": 0.6648828387260437
+  },
+  {
+    "score_name": "area_only",
+    "weights": {
+      "early_area": -1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.21963626146316528,
+    "random_mean": -0.21963661909103394,
+    "margin_mean": 0.4392728805541992,
+    "margin_std": 1.1175848245620728,
+    "ar_win_rate": 0.6596484184265137
+  },
+  {
+    "score_name": "area_plus_late_drop",
+    "weights": {
+      "early_area": -1.0,
+      "late_drop": -1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.3807414174079895,
+    "random_mean": -0.380741685628891,
+    "margin_mean": 0.7614830136299133,
+    "margin_std": 2.0571460723876953,
+    "ar_win_rate": 0.6595703363418579
+  },
+  {
+    "score_name": "area_slope_late_drop",
+    "weights": {
+      "early_area": -1.0,
+      "early_slope": 1.0,
+      "late_drop": -1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.5149491429328918,
+    "random_mean": -0.5149493217468262,
+    "margin_mean": 1.0298985242843628,
+    "margin_std": 2.827010154724121,
+    "ar_win_rate": 0.65625
+  },
+  {
+    "score_name": "area_slope_variance_late_drop",
+    "weights": {
+      "early_area": -1.0,
+      "early_slope": 1.0,
+      "early_variance": -1.0,
+      "late_drop": -1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.4877936542034149,
+    "random_mean": -0.4877939522266388,
+    "margin_mean": 0.9755875468254089,
+    "margin_std": 2.9999523162841797,
+    "ar_win_rate": 0.6484765410423279
+  },
+  {
+    "score_name": "area_slope_variance",
+    "weights": {
+      "early_area": -1.0,
+      "early_slope": 1.0,
+      "early_variance": -1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.3266885280609131,
+    "random_mean": -0.3266889154911041,
+    "margin_mean": 0.6533774733543396,
+    "margin_std": 2.0518898963928223,
+    "ar_win_rate": 0.6451171636581421
+  },
+  {
+    "score_name": "full_with_ratio",
+    "weights": {
+      "early_area": -1.0,
+      "early_slope": 1.0,
+      "early_variance": -1.0,
+      "late_drop_ratio": -1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.3659420907497406,
+    "random_mean": -0.36594244837760925,
+    "margin_mean": 0.7318845391273499,
+    "margin_std": 2.90246844291687,
+    "ar_win_rate": 0.6405078172683716
+  },
+  {
+    "score_name": "area_plus_variance",
+    "weights": {
+      "early_area": -1.0,
+      "early_variance": -1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.19248074293136597,
+    "random_mean": -0.19248118996620178,
+    "margin_mean": 0.38496193289756775,
+    "margin_std": 1.732268214225769,
+    "ar_win_rate": 0.6062890887260437
+  },
+  {
+    "score_name": "slope_only",
+    "weights": {
+      "early_slope": 1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.13420777022838593,
+    "random_mean": -0.13420771062374115,
+    "margin_mean": 0.2684154808521271,
+    "margin_std": 1.3861947059631348,
+    "ar_win_rate": 0.5811328291893005
+  },
+  {
+    "score_name": "late_drop_only",
+    "weights": {
+      "late_drop": -1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": 0.16110514104366302,
+    "random_mean": -0.16110503673553467,
+    "margin_mean": 0.3222101628780365,
+    "margin_std": 1.385455846786499,
+    "ar_win_rate": 0.5260156393051147
+  },
+  {
+    "score_name": "variance_only",
+    "weights": {
+      "early_variance": -1.0
+    },
+    "evaluation_note": "AR-likeness scores are evaluation-only diagnostics for checking whether AR trajectories score higher than Random trajectories. They are not training targets or propagated supervision signals.",
+    "ar_mean": -0.027155520394444466,
+    "random_mean": 0.027155425399541855,
+    "margin_mean": -0.05431095138192177,
+    "margin_std": 1.3322906494140625,
+    "ar_win_rate": 0.47355470061302185
+  }
+]

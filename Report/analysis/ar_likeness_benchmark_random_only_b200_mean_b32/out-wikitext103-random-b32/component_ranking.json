@@ -1,0 +1,44 @@
+[
+  {
+    "component": "early_area",
+    "ar_mean": 0.21963626146316528,
+    "random_mean": -0.21963661909103394,
+    "margin_mean": 0.4392728805541992,
+    "ar_better_rate": 0.6596484184265137
+  },
+  {
+    "component": "early_slope",
+    "ar_mean": 0.13420777022838593,
+    "random_mean": -0.13420771062374115,
+    "margin_mean": 0.2684154808521271,
+    "ar_better_rate": 0.5811328291893005
+  },
+  {
+    "component": "late_drop",
+    "ar_mean": 0.16110514104366302,
+    "random_mean": -0.16110503673553467,
+    "margin_mean": 0.3222101628780365,
+    "ar_better_rate": 0.5260156393051147
+  },
+  {
+    "component": "late_drop_ratio",
+    "ar_mean": 0.039253562688827515,
+    "random_mean": -0.03925357386469841,
+    "margin_mean": 0.07850713282823563,
+    "ar_better_rate": 0.5174999833106995
+  },
+  {
+    "component": "early_variance",
+    "ar_mean": -0.027155520394444466,
+    "random_mean": 0.027155425399541855,
+    "margin_mean": -0.05431095138192177,
+    "ar_better_rate": 0.47355470061302185
+  },
+  {
+    "component": "late_mean_gap",
+    "ar_mean": -0.1472606658935547,
+    "random_mean": 0.1472606211900711,
+    "margin_mean": -0.294521301984787,
+    "ar_better_rate": 0.4147265553474426
+  }
+]
