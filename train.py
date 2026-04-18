@@ -58,6 +58,7 @@ init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
 wandb_log = True 
 wandb_project = 'ao-gpt-experiments' # 你的项目名称
 wandb_run_name = 'mdm_random_order_run1' # 你的实验运行名称
+wandb_run_id = ''
 # data
 dataset = 'openwebtext'
 permute_data = False
@@ -564,7 +565,15 @@ def get_lr(it):
 # logging
 if wandb_log and master_process:
     import wandb
-    wandb.init(project=wandb_project, name=wandb_run_name, config=config)
+    wandb_init_kwargs = {
+        "project": wandb_project,
+        "name": wandb_run_name,
+        "config": config,
+    }
+    if str(wandb_run_id).strip():
+        wandb_init_kwargs["id"] = str(wandb_run_id).strip()
+        wandb_init_kwargs["resume"] = "allow"
+    wandb.init(**wandb_init_kwargs)
 
 # training loop
 X, Y = get_batch('train') # fetch the very first batch

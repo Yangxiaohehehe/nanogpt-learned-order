@@ -10,6 +10,7 @@ python scripts/runner/segment_curriculum_runner.py \
 """
 
 import argparse
+import hashlib
 import json
 import shlex
 import subprocess
@@ -250,6 +251,7 @@ def build_train_cmd(
     segment_max_units_per_order,
     wandb_project=None,
     wandb_run_name=None,
+    wandb_run_id=None,
 ):
     cmd = [
         sys.executable,
@@ -269,15 +271,15 @@ def build_train_cmd(
         cmd.append(f"--wandb_project={wandb_project}")
     if wandb_run_name:
         cmd.append(f"--wandb_run_name={wandb_run_name}")
+    if wandb_run_id:
+        cmd.append(f"--wandb_run_id={wandb_run_id}")
     return cmd
 
 
-def build_stage_wandb_run_name(base_name, stage_idx):
-    if not base_name:
-        return None
-    if int(stage_idx) == 0:
-        return f"{base_name}-warmup"
-    return f"{base_name}-stage{int(stage_idx):02d}"
+def build_curriculum_wandb_run_id(base_name, train_out_dir, config_path):
+    seed = f"{base_name}|{Path(train_out_dir)}|{Path(config_path)}"
+    digest = hashlib.sha1(seed.encode("utf-8")).hexdigest()[:16]
+    return f"curr-{digest}"
 
 
 def build_benchmark_cmd(
@@ -303,6 +305,8 @@ def build_benchmark_cmd(
     attn_batch_size,
     attn_mode,
     attn_symmetrize,
+    attn_export_type,
+    skip_candidate_pool_eval,
 ):
     cmd = [
         sys.executable,
@@ -333,8 +337,11 @@ def build_benchmark_cmd(
                 f"--attn_batch_size={int(attn_batch_size)}",
                 f"--attn_mode={attn_mode}",
                 f"--attn_symmetrize={attn_symmetrize}",
+                f"--attn_export_type={attn_export_type}",
             ]
         )
+    if bool(skip_candidate_pool_eval):
+        cmd.append("--skip_candidate_pool_eval")
     return cmd
 
 
@@ -380,7 +387,13 @@ def parse_args():
         "--wandb_run_name",
         type=str,
         default=config_ns.get("wandb_run_name", None),
-        help="Base W&B run name. Runner will expand it to -warmup / -stageXX.",
+        help="W&B run name shared across the full curriculum pipeline.",
+    )
+    parser.add_argument(
+        "--wandb_run_id",
+        type=str,
+        default=str(config_ns.get("wandb_run_id", "")),
+        help="Optional fixed W&B run id. If omitted, runner derives a stable id from config/output paths.",
     )
     parser.add_argument("--warmup_iters", type=int, default=int(config_ns.get("warmup_iters", 4000)))
     parser.add_argument("--stage_iters", type=int, default=int(config_ns.get("stage_iters", 4000)))
@@ -409,6 +422,12 @@ def parse_args():
     parser.add_argument("--top_pair_pool_size", type=int, default=int(config_ns.get("top_pair_pool_size", 128)))
     parser.add_argument("--aggregate_top_k_pairs", type=int, default=int(config_ns.get("aggregate_top_k_pairs", 64)))
     parser.add_argument("--prefix_len", type=int, default=int(config_ns.get("prefix_len", 8)))
+    parser.add_argument(
+        "--skip_candidate_pool_eval",
+        action="store_true",
+        default=bool(config_ns.get("skip_candidate_pool_eval", False)),
+        help="Skip structured/random/l2r candidate-pool evaluation in benchmark stages.",
+    )
     parser.add_argument("--pair_score_k", type=int, default=int(config_ns.get("pair_score_k", 2)))
     parser.add_argument("--tv_weight", type=float, default=float(config_ns.get("tv_weight", 0.3)))
     parser.add_argument("--benchmark_log_every_batches", type=int, default=int(config_ns.get("benchmark_log_every_batches", 10)))
@@ -433,6 +452,12 @@ def parse_args():
         default=str(config_ns.get("attn_symmetrize", "mean")),
         choices=["mean", "max"],
     )
+    parser.add_argument(
+        "--attn_export_type",
+        type=str,
+        default=str(config_ns.get("attn_export_type", "without_none")),
+        choices=["with_none", "without_none"],
+    )
     args = parser.parse_args(filtered_argv)
     return args
 
@@ -453,6 +478,13 @@ def main():
     benchmark_root = args.benchmark_root if args.benchmark_root.is_absolute() else REPO_ROOT / args.benchmark_root
     benchmark_root.mkdir(parents=True, exist_ok=True)
     ckpt_path = train_out_dir / "ckpt.pt"
+    wandb_run_id = str(args.wandb_run_id).strip()
+    if args.wandb_project and not wandb_run_id:
+        wandb_run_id = build_curriculum_wandb_run_id(
+            base_name=args.wandb_run_name or train_out_dir.name,
+            train_out_dir=train_out_dir,
+            config_path=config_path,
+        )
 
     # Stage 0: pure-random warmup from scratch.
     run_command(
@@ -468,7 +500,8 @@ def main():
             segment_max_len=segment_lens[0],
             segment_max_units_per_order=args.segment_max_units_per_order,
             wandb_project=args.wandb_project,
-            wandb_run_name=build_stage_wandb_run_name(args.wandb_run_name, stage_idx=0),
+            wandb_run_name=args.wandb_run_name,
+            wandb_run_id=wandb_run_id,
         ),
         cwd=repo_dir,
     )
@@ -500,6 +533,8 @@ def main():
                 attn_batch_size=args.attn_batch_size,
                 attn_mode=args.attn_mode,
                 attn_symmetrize=args.attn_symmetrize,
+                attn_export_type=args.attn_export_type,
+                skip_candidate_pool_eval=args.skip_candidate_pool_eval,
             ),
             cwd=repo_dir,
         )
@@ -518,7 +553,8 @@ def main():
                 segment_max_len=segment_lens[stage_idx - 1],
                 segment_max_units_per_order=args.segment_max_units_per_order,
                 wandb_project=args.wandb_project,
-                wandb_run_name=build_stage_wandb_run_name(args.wandb_run_name, stage_idx=stage_idx),
+                wandb_run_name=args.wandb_run_name,
+                wandb_run_id=wandb_run_id,
             ),
             cwd=repo_dir,
         )
@@ -535,6 +571,7 @@ def main():
         "benchmark_root": str(benchmark_root),
         "wandb_project": args.wandb_project,
         "wandb_run_name": args.wandb_run_name,
+        "wandb_run_id": wandb_run_id,
         "warmup_iters": int(args.warmup_iters),
         "stage_iters": int(args.stage_iters),
         "num_curriculum_stages": int(args.num_curriculum_stages),
@@ -548,6 +585,8 @@ def main():
         "attn_batch_size": int(args.attn_batch_size),
         "attn_mode": str(args.attn_mode),
         "attn_symmetrize": str(args.attn_symmetrize),
+        "attn_export_type": str(args.attn_export_type),
+        "skip_candidate_pool_eval": bool(args.skip_candidate_pool_eval),
     }
     (benchmark_root / "runner_meta.json").write_text(
         json.dumps(final_payload, ensure_ascii=False, indent=2),

@@ -13,7 +13,7 @@
   "num_batches": 32,
   "batch_size": 32,
   "num_samples_aggregated": 1024,
-  "mean_loss": 4.264602541923523,
+  "mean_loss": 4.264343827962875,
   "logits_shape": [
     32,
     257,

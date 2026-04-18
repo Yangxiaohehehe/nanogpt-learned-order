@@ -20,19 +20,13 @@ segment_max_units_per_order = 2
 segment_top_k_pairs = 32
 
 benchmark_batch_size = 32
-benchmark_num_batches = 100
 pair_mining_batches = 12
 pair_eval_batch_size = 4
-candidate_eval_batch_size = 32
 
-random_pool_size = 32
-structured_pool_size = 32
-top_pair_pool_size = 64
 aggregate_top_k_pairs = 32
-prefix_len = 16
+skip_candidate_pool_eval = True
 pair_score_k = 2
 tv_weight = 0.3
-benchmark_log_every_batches = 10
 
 pair_mining_mode = 'attention_pruned'
 attn_top_k = 8
@@ -40,3 +34,13 @@ attn_num_batches = 12
 attn_batch_size = 16
 attn_mode = 'Random'
 attn_symmetrize = 'mean'
+
+# Parameters below are retained for CLI/config compatibility, but when
+# skip_candidate_pool_eval=True they do not affect the fast curriculum path:
+# - benchmark_num_batches
+# - candidate_eval_batch_size
+# - random_pool_size
+# - structured_pool_size
+# - top_pair_pool_size
+# - prefix_len
+# - benchmark_log_every_batches

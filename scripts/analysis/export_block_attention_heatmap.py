@@ -560,6 +560,48 @@ def save_heatmap_png(matrix, out_path: Path, title: str, *, cmap="viridis", vmin
     return True
 
 
+def infer_percentile_vmax(matrix, percentile=99.0):
+    values = np.asarray(matrix, dtype=np.float32)
+    positive = values[values > 0]
+    if positive.size == 0:
+        return None
+    vmax = float(np.percentile(positive, percentile))
+    if vmax <= 0:
+        return None
+    return vmax
+
+
+def save_distance_curve_png(distances, values, out_path: Path, title: str):
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.figure(figsize=(8, 4.5))
+    plt.plot(distances, values, linewidth=2.0)
+    plt.xlabel("query-key distance")
+    plt.ylabel("mean attention")
+    plt.title(title)
+    plt.grid(True, alpha=0.25)
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200)
+    plt.close()
+    return True
+
+
+def compute_distance_profile(matrix):
+    values = np.asarray(matrix, dtype=np.float32)
+    if values.ndim != 2 or values.shape[0] != values.shape[1]:
+        raise ValueError(f"Expected a square matrix, got shape={values.shape}.")
+    num_positions = values.shape[0]
+    distances = np.arange(num_positions, dtype=np.int32)
+    means = np.zeros(num_positions, dtype=np.float32)
+    for distance in distances:
+        means[distance] = float(np.diag(values, k=-int(distance)).mean())
+    return distances, means
+
+
 def export_results(
     args,
     model,
@@ -596,7 +638,8 @@ def export_results(
             target_dir.mkdir(parents=True, exist_ok=True)
 
             base_name = f"block_attention_{export_type}"
-            np.save(target_dir / f"{base_name}.npy", matrix.numpy())
+            matrix_np = matrix.numpy()
+            np.save(target_dir / f"{base_name}.npy", matrix_np)
 
             metadata = {
                 "ckpt_path": str(args.ckpt_path),
@@ -643,7 +686,7 @@ def export_results(
 
             if export_type == "diff":
                 png_ok = save_heatmap_png(
-                    matrix.numpy(),
+                    matrix_np,
                     target_dir / f"{base_name}.png",
                     title=f"block attention diff | mode={args.mode} | frame={frame}",
                     cmap="coolwarm",
@@ -652,7 +695,7 @@ def export_results(
                 )
             else:
                 png_ok = save_heatmap_png(
-                    matrix.numpy(),
+                    matrix_np,
                     target_dir / f"{base_name}.png",
                     title=f"block attention {export_type} | mode={args.mode} | frame={frame}",
                 )
@@ -661,6 +704,52 @@ def export_results(
                 print(f"saved heatmap png to {target_dir / f'{base_name}.png'}")
             else:
                 print(f"matplotlib not installed; skipped png export for {target_dir / base_name}")
+
+            if export_type != "diff":
+                percentile_vmax = infer_percentile_vmax(matrix_np, percentile=99.0)
+                percentile_png_ok = save_heatmap_png(
+                    matrix_np,
+                    target_dir / f"{base_name}_p99.png",
+                    title=f"block attention {export_type} (p99-scaled) | mode={args.mode} | frame={frame}",
+                    vmax=percentile_vmax,
+                )
+                if percentile_png_ok:
+                    print(
+                        f"saved percentile-scaled heatmap png to {target_dir / f'{base_name}_p99.png'}"
+                    )
+
+                log_matrix_np = np.log10(matrix_np.astype(np.float32) + 1e-6)
+                np.save(target_dir / f"{base_name}_log10.npy", log_matrix_np)
+                log_png_ok = save_heatmap_png(
+                    log_matrix_np,
+                    target_dir / f"{base_name}_log10.png",
+                    title=f"block attention {export_type} (log10) | mode={args.mode} | frame={frame}",
+                    cmap="magma",
+                )
+                if log_png_ok:
+                    print(f"saved log-scaled heatmap png to {target_dir / f'{base_name}_log10.png'}")
+
+                distances, distance_means = compute_distance_profile(matrix_np)
+                np.save(target_dir / "distance_profile_distances.npy", distances)
+                np.save(target_dir / "distance_profile_mean_attention.npy", distance_means)
+                (target_dir / "distance_profile.json").write_text(
+                    json.dumps(
+                        {
+                            "distance": distances.tolist(),
+                            "mean_attention": distance_means.tolist(),
+                        },
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
+                distance_png_ok = save_distance_curve_png(
+                    distances,
+                    distance_means,
+                    target_dir / "distance_profile.png",
+                    title=f"block attention {export_type} distance profile | mode={args.mode} | frame={frame}",
+                )
+                if distance_png_ok:
+                    print(f"saved distance-profile png to {target_dir / 'distance_profile.png'}")
 
 
 def main():

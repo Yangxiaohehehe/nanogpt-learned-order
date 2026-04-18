@@ -23,9 +23,9 @@ aogpt_train_mode = 'Random'
 main_eval_mode = 'Random'
 generalization_eval_mode = ''
 order_impl = 'token'
-n_layer = 6
+n_layer = 3
 n_head = 8
-n_embd = 512
+n_embd = 256
 dropout = 0
 
 block_order_block_len = 1

@@ -67,7 +67,7 @@ def parse_args():
         type=str,
         default="full",
         choices=["full", "attention_pruned"],
-        help="Use exhaustive pair mining or prune candidates with without-none block attention first.",
+        help="Use exhaustive pair mining or prune candidates with block attention first.",
     )
     parser.add_argument(
         "--attn_top_k",
@@ -79,13 +79,20 @@ def parse_args():
         "--attn_num_batches",
         type=int,
         default=24,
-        help="Batches used to estimate the without-none attention matrix for pruning.",
+        help="Batches used to estimate the attention matrix for pruning.",
     )
     parser.add_argument(
         "--attn_batch_size",
         type=int,
         default=32,
-        help="Batch size used to estimate the without-none attention matrix for pruning.",
+        help="Batch size used to estimate the attention matrix for pruning.",
+    )
+    parser.add_argument(
+        "--attn_export_type",
+        type=str,
+        default="with_none",
+        choices=["with_none", "without_none"],
+        help="Which AO-GPT attention view to use for attention-pruned pair mining.",
     )
     parser.add_argument(
         "--attn_mode",
@@ -105,6 +112,14 @@ def parse_args():
         "--save_all_pair_scores",
         action="store_true",
         help="Save the full ranked pair list with scores, not only the top rows in results.json.",
+    )
+    parser.add_argument(
+        "--skip_candidate_pool_eval",
+        action="store_true",
+        help=(
+            "Skip structured/random/l2r candidate-pool evaluation and export only "
+            "pair scores, optional attention pruning metadata, and aggregated segments."
+        ),
     )
     parser.add_argument("--seed", type=int, default=12345)
     parser.add_argument(
@@ -312,6 +327,17 @@ def aggregate_real_token_attention_to_block(attn_2d, block_len):
     return real_token_attn.view(num_blocks, block_len, num_blocks, block_len).mean(dim=(1, 3))
 
 
+def aggregate_predictor_aligned_attention_to_block(attn_2d, block_len):
+    shifted_attn = attn_2d[:-1, :-1]
+    num_predictor_positions = shifted_attn.size(0)
+    if num_predictor_positions % block_len != 0:
+        raise ValueError(
+            f"Predictor-aligned attention length {num_predictor_positions} is not divisible by block_len={block_len}."
+        )
+    num_blocks = num_predictor_positions // block_len
+    return shifted_attn.view(num_blocks, block_len, num_blocks, block_len).mean(dim=(1, 3))
+
+
 def reorder_block_attention_to_original(block_matrix, block_order):
     if block_order.device != block_matrix.device:
         block_order = block_order.to(device=block_matrix.device)
@@ -331,12 +357,17 @@ def mine_attention_pruned_candidates(
     autocast_context,
     seed,
     symmetrize,
+    export_type,
 ):
+    print(
+        f"[progress] starting attention pruning: num_batches={int(num_batches)}, "
+        f"batch_size={int(batch_size)}, top_k={int(top_k)}, mode={mode}, export_type={export_type}"
+    )
     rng = np.random.default_rng(seed)
     matrix_sum = torch.zeros((model.num_blocks, model.num_blocks), dtype=torch.float64)
     total_samples = 0
 
-    for _ in range(int(num_batches)):
+    for batch_idx in range(1, int(num_batches) + 1):
         idx = sample_batch(tokens, batch_size, model.config.block_size, rng, device, token_perm=token_perm)
         token_orders, block_orders = build_orders_for_mode(model, idx, mode)
         with autocast_context:
@@ -344,15 +375,26 @@ def mine_attention_pruned_candidates(
         attn_outputs = extract_attentions_from_outputs(outputs)
         attn_batch = reduce_attention_batch(attn_outputs)
         for sample_idx in range(attn_batch.size(0)):
-            block_matrix = aggregate_real_token_attention_to_block(
-                attn_batch[sample_idx],
-                block_len=model.block_order_block_len,
-            )
+            if export_type == "with_none":
+                block_matrix = aggregate_predictor_aligned_attention_to_block(
+                    attn_batch[sample_idx],
+                    block_len=model.block_order_block_len,
+                )
+            else:
+                block_matrix = aggregate_real_token_attention_to_block(
+                    attn_batch[sample_idx],
+                    block_len=model.block_order_block_len,
+                )
             matrix_sum += reorder_block_attention_to_original(
                 block_matrix,
                 block_orders[sample_idx].detach(),
             ).double().to(device=matrix_sum.device)
             total_samples += 1
+        if batch_idx == 1 or batch_idx % max(1, int(num_batches) // 5) == 0 or batch_idx == int(num_batches):
+            print(
+                f"[progress] attention pruning batch {batch_idx}/{int(num_batches)} "
+                f"aggregated_samples={int(total_samples)}"
+            )
 
     if total_samples <= 0:
         raise RuntimeError("Attention-pruned pair mining did not aggregate any samples.")
@@ -391,6 +433,11 @@ def mine_attention_pruned_candidates(
     for first, second in sorted(undirected_edges):
         pair_list.append((int(first), int(second)))
         pair_list.append((int(second), int(first)))
+
+    print(
+        f"[progress] finished attention pruning: undirected_edges={int(len(undirected_edges))}, "
+        f"directed_pairs={int(len(pair_list))}"
+    )
 
     return {
         "attention_matrix": attention_matrix,
@@ -482,6 +529,11 @@ def mine_pair_scores(
     if pair_list is None:
         pair_list = [(i, j) for i in range(num_blocks) for j in range(num_blocks) if i != j]
     pair_list = [(int(i), int(j)) for i, j in pair_list if int(i) != int(j)]
+    print(
+        f"[progress] starting pair scoring: num_pairs={int(len(pair_list))}, "
+        f"num_batches={int(num_batches)}, batch_size={int(batch_size)}, "
+        f"pair_eval_batch_size={int(pair_eval_batch_size)}"
+    )
     pair_score_sums = torch.zeros(len(pair_list), dtype=torch.float64)
     pair_score_counts = 0
 
@@ -491,9 +543,11 @@ def mine_pair_scores(
 
     chunk_size = max(1, int(pair_eval_batch_size))
     eval_chunk_size = max(1, int(pair_eval_batch_size))
-    for _ in range(int(num_batches)):
+    total_chunks = max(1, (len(pair_list) + chunk_size - 1) // chunk_size)
+    for batch_idx in range(1, int(num_batches) + 1):
+        print(f"[progress] pair scoring batch {batch_idx}/{int(num_batches)}: sampling data batch")
         idx = sample_batch(tokens, batch_size, model.config.block_size, rng, device, token_perm=token_perm)
-        for start in range(0, len(pair_list), chunk_size):
+        for chunk_idx, start in enumerate(range(0, len(pair_list), chunk_size), start=1):
             chunk_pairs = pair_list[start : start + chunk_size]
             pair_orders = build_random_suffix_orders(
                 chunk_pairs,
@@ -528,7 +582,18 @@ def mine_pair_scores(
                 )
             scores = torch.cat(score_parts, dim=0).view(idx.size(0), len(chunk_pairs)).mean(dim=0).double()
             pair_score_sums[start : start + len(chunk_pairs)] += scores
+            if (
+                chunk_idx == 1
+                or chunk_idx % max(1, total_chunks // 5) == 0
+                or chunk_idx == total_chunks
+            ):
+                print(
+                    f"[progress] pair scoring batch {batch_idx}/{int(num_batches)} "
+                    f"chunk {chunk_idx}/{total_chunks} "
+                    f"(pairs {start + 1}-{start + len(chunk_pairs)} of {len(pair_list)})"
+                )
         pair_score_counts += 1
+        print(f"[progress] completed pair scoring batch {batch_idx}/{int(num_batches)}")
 
     pair_score_means = pair_score_sums / max(1, pair_score_counts)
     pair_score_matrix = torch.full((num_blocks, num_blocks), float("-inf"), dtype=torch.float64)
@@ -551,6 +616,7 @@ def mine_pair_scores(
         key=lambda row: (row["score"], row["margin_vs_reverse"]),
         reverse=True,
     )
+    print(f"[progress] finished pair scoring: ranked_pairs={int(len(top_pairs))}")
     return pair_score_matrix, top_pairs, pair_list
 
 
@@ -788,10 +854,15 @@ def summarize_selected_orders(selected_orders, selected_signals, selected_full_s
 
 def main():
     args = parse_args()
+    print(f"[progress] loading checkpoint from {args.ckpt_path}")
     checkpoint = load_checkpoint(args.ckpt_path, args.device)
     data_dir = resolve_data_dir(args, checkpoint)
     tokens = load_tokens(data_dir, args.split)
     model = build_model(checkpoint, args.device)
+    print(
+        f"[progress] model ready: num_blocks={int(model.num_blocks)}, "
+        f"block_len={int(model.block_order_block_len)}, split={args.split}, device={args.device}"
+    )
     autocast_context = get_autocast_context(args.device, args.dtype)
     permutation_state = load_block_permutation_from_checkpoint(
         checkpoint,
@@ -805,6 +876,7 @@ def main():
     attention_pruning = None
     pair_list = None
     if args.pair_mining_mode == "attention_pruned":
+        print("[progress] entering attention-pruned candidate mining")
         attention_pruning = mine_attention_pruned_candidates(
             model,
             tokens=tokens,
@@ -817,9 +889,14 @@ def main():
             autocast_context=autocast_context,
             seed=int(args.seed) + 17,
             symmetrize=str(args.attn_symmetrize),
+            export_type=str(args.attn_export_type),
         )
         pair_list = attention_pruning["pair_list"]
+        print(f"[progress] attention-pruned candidate mining complete: directed_pairs={len(pair_list)}")
+    else:
+        print("[progress] pair_mining_mode=full; scoring all directed pairs")
 
+    print("[progress] entering pair scoring")
     pair_score_matrix, top_pairs, mined_pair_list = mine_pair_scores(
         model,
         tokens=tokens,
@@ -834,159 +911,169 @@ def main():
         pair_list=pair_list,
         token_perm=token_perm,
     )
+    print(f"[progress] pair scoring complete: mined_pairs={len(mined_pair_list)}, top_pairs={len(top_pairs)}")
+    print("[progress] aggregating top pairs into segments")
     aggregated_segments = aggregate_top_pairs_to_segments(
         top_pairs,
         num_blocks=model.num_blocks,
         top_k=int(args.aggregate_top_k_pairs),
         max_segment_len=int(args.segment_len),
     )
+    print(f"[progress] segment aggregation complete: aggregated_segments={len(aggregated_segments)}")
 
-    rng = np.random.default_rng(args.seed + 101)
-    generator = torch.Generator(device="cuda" if "cuda" in args.device else "cpu")
-    generator.manual_seed(args.seed + 101)
-
-    best_structured_orders = []
-    best_random_orders = []
-    l2r_orders = []
-    best_structured_early = []
-    best_random_early = []
-    l2r_early = []
-    best_structured_full = []
-    best_random_full = []
-    l2r_full = []
-
-    top_pairs_for_generation = top_pairs[: int(args.top_pair_pool_size)]
-
-    for batch_idx in range(1, int(args.num_batches) + 1):
-        idx = sample_batch(
-            tokens,
-            int(args.batch_size),
-            model.config.block_size,
-            rng,
-            args.device,
-            token_perm=token_perm,
+    summaries = {}
+    if bool(args.skip_candidate_pool_eval):
+        print(
+            "[progress] skip_candidate_pool_eval=True; exporting pair/segment results "
+            "without structured/random/l2r candidate-pool evaluation."
         )
-        structured_pool, random_pool = build_candidate_pool(
-            num_blocks=model.num_blocks,
-            pair_score_matrix=pair_score_matrix,
-            top_pairs=top_pairs_for_generation,
-            segments=aggregated_segments,
-            structured_pool_size=int(args.structured_pool_size),
-            random_pool_size=int(args.random_pool_size),
-            prefix_len=int(args.prefix_len),
-            segment_len=int(args.segment_len),
-            generator=generator,
-            device=args.device,
-        )
-        l2r_pool = build_ascending_block_orders(1, model.num_blocks, args.device)
+    else:
+        rng = np.random.default_rng(args.seed + 101)
+        generator = torch.Generator(device="cuda" if "cuda" in args.device else "cpu")
+        generator.manual_seed(args.seed + 101)
 
-        def evaluate_pool(pool):
-            tiled_orders = pool.unsqueeze(0).expand(idx.size(0), -1, -1)
-            flat_orders = tiled_orders.reshape(idx.size(0) * pool.size(0), model.num_blocks)
-            flat_idx = idx.unsqueeze(1).expand(idx.size(0), pool.size(0), idx.size(1)).reshape(
-                idx.size(0) * pool.size(0),
-                idx.size(1),
+        best_structured_orders = []
+        best_random_orders = []
+        l2r_orders = []
+        best_structured_early = []
+        best_random_early = []
+        l2r_early = []
+        best_structured_full = []
+        best_random_full = []
+        l2r_full = []
+
+        top_pairs_for_generation = top_pairs[: int(args.top_pair_pool_size)]
+
+        for batch_idx in range(1, int(args.num_batches) + 1):
+            idx = sample_batch(
+                tokens,
+                int(args.batch_size),
+                model.config.block_size,
+                rng,
+                args.device,
+                token_perm=token_perm,
             )
-            out = evaluate_orders_with_metrics(
-                model,
-                flat_idx,
-                flat_orders,
-                early_k=early_k,
-                tv_weight=float(args.tv_weight),
-                autocast_context=autocast_context,
-                eval_batch_size=int(args.candidate_eval_batch_size),
+            structured_pool, random_pool = build_candidate_pool(
+                num_blocks=model.num_blocks,
+                pair_score_matrix=pair_score_matrix,
+                top_pairs=top_pairs_for_generation,
+                segments=aggregated_segments,
+                structured_pool_size=int(args.structured_pool_size),
+                random_pool_size=int(args.random_pool_size),
+                prefix_len=int(args.prefix_len),
+                segment_len=int(args.segment_len),
+                generator=generator,
+                device=args.device,
             )
-            return {
-                "orders": tiled_orders,
-                "early_signal": out["early_area_plus_tv"].view(idx.size(0), pool.size(0)),
-                "full_signal": out["full_area_plus_tv"].view(idx.size(0), pool.size(0)),
-            }
+            l2r_pool = build_ascending_block_orders(1, model.num_blocks, args.device)
 
-        structured_eval = evaluate_pool(structured_pool)
-        random_eval = evaluate_pool(random_pool)
-        l2r_eval = evaluate_pool(l2r_pool)
+            def evaluate_pool(pool):
+                tiled_orders = pool.unsqueeze(0).expand(idx.size(0), -1, -1)
+                flat_orders = tiled_orders.reshape(idx.size(0) * pool.size(0), model.num_blocks)
+                flat_idx = idx.unsqueeze(1).expand(idx.size(0), pool.size(0), idx.size(1)).reshape(
+                    idx.size(0) * pool.size(0),
+                    idx.size(1),
+                )
+                out = evaluate_orders_with_metrics(
+                    model,
+                    flat_idx,
+                    flat_orders,
+                    early_k=early_k,
+                    tv_weight=float(args.tv_weight),
+                    autocast_context=autocast_context,
+                    eval_batch_size=int(args.candidate_eval_batch_size),
+                )
+                return {
+                    "orders": tiled_orders,
+                    "early_signal": out["early_area_plus_tv"].view(idx.size(0), pool.size(0)),
+                    "full_signal": out["full_area_plus_tv"].view(idx.size(0), pool.size(0)),
+                }
 
-        structured_combined = structured_eval["early_signal"] + 1e-4 * structured_eval["full_signal"]
-        random_combined = random_eval["early_signal"] + 1e-4 * random_eval["full_signal"]
+            structured_eval = evaluate_pool(structured_pool)
+            random_eval = evaluate_pool(random_pool)
+            l2r_eval = evaluate_pool(l2r_pool)
 
-        batch_indices = torch.arange(idx.size(0), device=idx.device)
-        best_struct_idx = structured_combined.argmax(dim=1)
-        best_rand_idx = random_combined.argmax(dim=1)
+            structured_combined = structured_eval["early_signal"] + 1e-4 * structured_eval["full_signal"]
+            random_combined = random_eval["early_signal"] + 1e-4 * random_eval["full_signal"]
 
-        best_structured_orders.append(structured_eval["orders"][batch_indices, best_struct_idx].cpu())
-        best_random_orders.append(random_eval["orders"][batch_indices, best_rand_idx].cpu())
-        l2r_orders.append(l2r_eval["orders"][:, 0].cpu())
+            batch_indices = torch.arange(idx.size(0), device=idx.device)
+            best_struct_idx = structured_combined.argmax(dim=1)
+            best_rand_idx = random_combined.argmax(dim=1)
 
-        best_structured_early.append(structured_eval["early_signal"][batch_indices, best_struct_idx].cpu())
-        best_random_early.append(random_eval["early_signal"][batch_indices, best_rand_idx].cpu())
-        l2r_early.append(l2r_eval["early_signal"][:, 0].cpu())
+            best_structured_orders.append(structured_eval["orders"][batch_indices, best_struct_idx].cpu())
+            best_random_orders.append(random_eval["orders"][batch_indices, best_rand_idx].cpu())
+            l2r_orders.append(l2r_eval["orders"][:, 0].cpu())
 
-        best_structured_full.append(structured_eval["full_signal"][batch_indices, best_struct_idx].cpu())
-        best_random_full.append(random_eval["full_signal"][batch_indices, best_rand_idx].cpu())
-        l2r_full.append(l2r_eval["full_signal"][:, 0].cpu())
+            best_structured_early.append(structured_eval["early_signal"][batch_indices, best_struct_idx].cpu())
+            best_random_early.append(random_eval["early_signal"][batch_indices, best_rand_idx].cpu())
+            l2r_early.append(l2r_eval["early_signal"][:, 0].cpu())
 
-        if batch_idx == 1 or batch_idx % max(1, int(args.log_every_batches)) == 0:
-            print(
-                f"[progress] batch {batch_idx}/{int(args.num_batches)} "
-                f"structured_best_early={torch.cat(best_structured_early).mean().item():.4f} "
-                f"random_best_early={torch.cat(best_random_early).mean().item():.4f}"
-            )
+            best_structured_full.append(structured_eval["full_signal"][batch_indices, best_struct_idx].cpu())
+            best_random_full.append(random_eval["full_signal"][batch_indices, best_rand_idx].cpu())
+            l2r_full.append(l2r_eval["full_signal"][:, 0].cpu())
 
-    best_structured_orders = torch.cat(best_structured_orders, dim=0)
-    best_random_orders = torch.cat(best_random_orders, dim=0)
-    l2r_orders = torch.cat(l2r_orders, dim=0)
-    best_structured_early = torch.cat(best_structured_early, dim=0)
-    best_random_early = torch.cat(best_random_early, dim=0)
-    l2r_early = torch.cat(l2r_early, dim=0)
-    best_structured_full = torch.cat(best_structured_full, dim=0)
-    best_random_full = torch.cat(best_random_full, dim=0)
-    l2r_full = torch.cat(l2r_full, dim=0)
+            if batch_idx == 1 or batch_idx % max(1, int(args.log_every_batches)) == 0:
+                print(
+                    f"[progress] batch {batch_idx}/{int(args.num_batches)} "
+                    f"structured_best_early={torch.cat(best_structured_early).mean().item():.4f} "
+                    f"random_best_early={torch.cat(best_random_early).mean().item():.4f}"
+                )
 
-    summaries = {
-        "best_structured": summarize_selected_orders(
-            best_structured_orders,
-            best_structured_early,
-            best_structured_full,
-            prefix_len=int(args.prefix_len),
-        ),
-        "best_random_pool": summarize_selected_orders(
-            best_random_orders,
-            best_random_early,
-            best_random_full,
-            prefix_len=int(args.prefix_len),
-        ),
-        "l2r_reference": summarize_selected_orders(
-            l2r_orders,
-            l2r_early,
-            l2r_full,
-            prefix_len=int(args.prefix_len),
-        ),
-    }
-    if block_perm is not None:
-        best_structured_orders_original = map_orders_tensor_to_original(best_structured_orders, block_perm)
-        best_random_orders_original = map_orders_tensor_to_original(best_random_orders, block_perm)
-        l2r_orders_original = map_orders_tensor_to_original(l2r_orders, block_perm)
-        summaries_original = {
-            "best_structured_original_frame": summarize_selected_orders(
-                best_structured_orders_original,
+        best_structured_orders = torch.cat(best_structured_orders, dim=0)
+        best_random_orders = torch.cat(best_random_orders, dim=0)
+        l2r_orders = torch.cat(l2r_orders, dim=0)
+        best_structured_early = torch.cat(best_structured_early, dim=0)
+        best_random_early = torch.cat(best_random_early, dim=0)
+        l2r_early = torch.cat(l2r_early, dim=0)
+        best_structured_full = torch.cat(best_structured_full, dim=0)
+        best_random_full = torch.cat(best_random_full, dim=0)
+        l2r_full = torch.cat(l2r_full, dim=0)
+
+        summaries = {
+            "best_structured": summarize_selected_orders(
+                best_structured_orders,
                 best_structured_early,
                 best_structured_full,
                 prefix_len=int(args.prefix_len),
             ),
-            "best_random_pool_original_frame": summarize_selected_orders(
-                best_random_orders_original,
+            "best_random_pool": summarize_selected_orders(
+                best_random_orders,
                 best_random_early,
                 best_random_full,
                 prefix_len=int(args.prefix_len),
             ),
-            "l2r_reference_original_frame": summarize_selected_orders(
-                l2r_orders_original,
+            "l2r_reference": summarize_selected_orders(
+                l2r_orders,
                 l2r_early,
                 l2r_full,
                 prefix_len=int(args.prefix_len),
             ),
         }
-        summaries.update(summaries_original)
+        if block_perm is not None:
+            best_structured_orders_original = map_orders_tensor_to_original(best_structured_orders, block_perm)
+            best_random_orders_original = map_orders_tensor_to_original(best_random_orders, block_perm)
+            l2r_orders_original = map_orders_tensor_to_original(l2r_orders, block_perm)
+            summaries_original = {
+                "best_structured_original_frame": summarize_selected_orders(
+                    best_structured_orders_original,
+                    best_structured_early,
+                    best_structured_full,
+                    prefix_len=int(args.prefix_len),
+                ),
+                "best_random_pool_original_frame": summarize_selected_orders(
+                    best_random_orders_original,
+                    best_random_early,
+                    best_random_full,
+                    prefix_len=int(args.prefix_len),
+                ),
+                "l2r_reference_original_frame": summarize_selected_orders(
+                    l2r_orders_original,
+                    l2r_early,
+                    l2r_full,
+                    prefix_len=int(args.prefix_len),
+                ),
+            }
+            summaries.update(summaries_original)
 
     top_pair_rows = top_pairs[: min(50, len(top_pairs))]
     full_pair_rows = top_pairs
@@ -1010,6 +1097,7 @@ def main():
         "pair_mining_mode": args.pair_mining_mode,
         "num_directed_pairs_scored": int(len(mined_pair_list)),
         "save_all_pair_scores": bool(args.save_all_pair_scores),
+        "skip_candidate_pool_eval": bool(args.skip_candidate_pool_eval),
         "candidate_eval_batch_size": args.candidate_eval_batch_size,
         "random_pool_size": args.random_pool_size,
         "structured_pool_size": args.structured_pool_size,
@@ -1027,6 +1115,7 @@ def main():
         "attn_batch_size": int(args.attn_batch_size),
         "attn_mode": str(args.attn_mode),
         "attn_symmetrize": str(args.attn_symmetrize),
+        "attn_export_type": str(args.attn_export_type),
         "permute_data": bool(checkpoint.get("config", {}).get("permute_data", False)),
         "permute_mode": checkpoint.get("config", {}).get("permute_mode", ""),
         "permute_seed": checkpoint.get("config", {}).get("permute_seed", None),
@@ -1034,16 +1123,17 @@ def main():
             "Local structure is mined from ordered pairs under the frozen checkpoint. "
             "Pair scores are computed from the first pair_score_k block reveal steps using area + tv. "
             "Top pairs are then greedily aggregated into consistent directed segments. "
-            "A structured candidate pool is then built from random, segment-guided, chain-biased, "
-            "pair-biased, and prefix-biased proposals, and compared against a pure-random candidate pool."
+            "Optional candidate-pool evaluation compares random and structure-guided proposals, "
+            "but the fast curriculum path can skip that step and export pair/segment outputs only."
         ),
     }
     payload = {
         "run_meta": run_meta,
-        "summaries": summaries,
         "top_pairs": top_pair_rows,
         "aggregated_segments": aggregated_segments,
     }
+    if summaries:
+        payload["summaries"] = summaries
     if attention_pruning is not None:
         payload["attention_pruning"] = {
             "num_attention_samples": int(attention_pruning["num_samples"]),
