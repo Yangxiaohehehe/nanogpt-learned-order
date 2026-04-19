@@ -6,8 +6,8 @@ eval_iters = 200
 log_interval = 10
 
 wandb_log = True
-wandb_project = 'AOGPT-base-block'
-wandb_run_name = 'seq256-random-b1-permute-6-8-256'
+wandb_project = 'AOGPT-order-block'
+wandb_run_name = 'seq256-random-b1-permute-6-6-576-base'
 
 dataset = 'wikitext103'
 batch_size = 64
@@ -23,16 +23,16 @@ aogpt_train_mode = 'Random'
 main_eval_mode = 'Random'
 generalization_eval_mode = ''
 order_impl = 'token'
-n_layer = 3
+n_layer = 8
 n_head = 8
-n_embd = 256
+n_embd = 512
 dropout = 0
 
 block_order_block_len = 1
 
 learning_rate = 1e-3
-max_iters = 20000
-lr_decay_iters = 20000
+max_iters = 30000
+lr_decay_iters = 30000
 min_lr = 1e-4
 beta2 = 0.99
 warmup_iters = 0

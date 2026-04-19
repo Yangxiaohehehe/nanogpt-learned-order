@@ -19,6 +19,7 @@ $ torchrun --nproc_per_node=8 --nnodes=2 --node_rank=1 --master_addr=123.456.123
 import os
 import time
 import math
+import itertools
 import pickle
 import sys
 import json
@@ -34,6 +35,7 @@ from order_utils import (
     block_permutation_to_token_permutation,
     build_fixed_block_permutation,
     expand_block_orders_to_token_orders,
+    kendall_tau_to_l2r_per_sample,
     sample_random_block_orders,
     token_losses_to_block_losses,
     invert_permutation,
@@ -98,6 +100,8 @@ compile = True # use PyTorch 2.0 to compile the model to be faster
 eval_generate_step_loss_log = True
 eval_generate_step_batches = 200
 eval_generate_step_loss_filename = 'generate_step_block_loss_latest.png'
+eval_kendall_distance_log = True
+eval_kendall_num_orders = 100
 train_stage = 'standard'
 block_order_block_len = 16
 segment_guided_ratio = 0.0
@@ -105,6 +109,7 @@ segment_source_json = ''
 segment_top_k_pairs = 64
 segment_max_len = 4
 segment_max_units_per_order = 2
+segment_use_all_units = False
 # -----------------------------------------------------------------------------
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str))]
 exec(open('configurator.py').read()) # overrides from command line or config file
@@ -382,6 +387,13 @@ if master_process and segment_guided_ratio > 0.0:
             f"loaded {len(segment_library)} aggregated segments "
             f"for segment-guided random training from {segment_source_json or '[none]'}"
         )
+        if bool(segment_use_all_units):
+            print("segment-guided mode: using all non-overlapping aggregated segments in each guided sample")
+        else:
+            print(
+                "segment-guided mode: sampling a subset of aggregated segments "
+                f"(max_units_per_order={int(segment_max_units_per_order)}) in each guided sample"
+            )
 
 
 def _sample_mixed_segment_guided_block_orders(batch_size_local, device_local):
@@ -396,7 +408,7 @@ def _sample_mixed_segment_guided_block_orders(batch_size_local, device_local):
         used_blocks = set()
         for seg_idx in shuffled_segment_indices:
             segment = segment_library[seg_idx]
-            if len(chosen_segments) >= int(segment_max_units_per_order):
+            if (not bool(segment_use_all_units)) and len(chosen_segments) >= int(segment_max_units_per_order):
                 break
             if any(value in used_blocks for value in segment):
                 continue
@@ -416,6 +428,28 @@ def _sample_mixed_segment_guided_block_orders(batch_size_local, device_local):
             order.extend(units[unit_idx])
         orders.append(torch.tensor(order, device=device_local, dtype=torch.long))
     return torch.stack(orders, dim=0)
+
+
+def _build_segment_guided_units():
+    shuffled_segment_indices = np.random.permutation(len(segment_library)).tolist()
+    chosen_segments = []
+    used_blocks = set()
+    for seg_idx in shuffled_segment_indices:
+        segment = segment_library[seg_idx]
+        if (not bool(segment_use_all_units)) and len(chosen_segments) >= int(segment_max_units_per_order):
+            break
+        if any(value in used_blocks for value in segment):
+            continue
+        chosen_segments.append(segment)
+        used_blocks.update(segment)
+
+    units = []
+    for segment in chosen_segments:
+        units.append(list(segment))
+    for block_idx in range(num_blocks):
+        if block_idx not in used_blocks:
+            units.append([block_idx])
+    return units
 
 # initialize a GradScaler. If enabled=False scaler is a no-op
 scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
@@ -541,6 +575,59 @@ def build_generate_step_block_loss_figure(ar_curve, random_curve, original_l2r_c
     return fig
 
 
+@torch.no_grad()
+def estimate_sampled_order_kendall_distance_stats(num_orders_override=None):
+    local_num_orders = int(
+        eval_kendall_num_orders if num_orders_override is None else num_orders_override
+    )
+    if local_num_orders <= 0:
+        raise ValueError("eval_kendall_num_orders must be positive.")
+    using_segment_guided = (
+        train_stage == 'standard'
+        and aogpt_train_mode == 'Random'
+        and float(segment_guided_ratio) > 0.0
+        and len(segment_library) > 0
+    )
+    if using_segment_guided:
+        units = _build_segment_guided_units()
+        num_units = len(units)
+        max_unique_orders = math.factorial(num_units) if num_units <= 8 else None
+        if max_unique_orders is not None and max_unique_orders <= local_num_orders:
+            orders = []
+            for perm in itertools.permutations(range(num_units)):
+                order = []
+                for unit_idx in perm:
+                    order.extend(units[unit_idx])
+                orders.append(torch.tensor(order, device=device, dtype=torch.long))
+            sampled_orders = torch.stack(orders, dim=0)
+        else:
+            sampled_orders = _sample_mixed_segment_guided_block_orders(
+                local_num_orders,
+                device,
+            )
+        sample_mode = "segment_guided"
+    else:
+        max_unique_orders = None
+        sampled_orders = sample_random_block_orders(
+            batch_size=local_num_orders,
+            num_blocks=num_blocks,
+            device=device,
+        )
+        sample_mode = "pure_random"
+    kendall_tau = kendall_tau_to_l2r_per_sample(sampled_orders).float().cpu()
+    total_pairs = num_blocks * (num_blocks - 1) / 2.0
+    kendall_distance = (1.0 - kendall_tau) * (total_pairs / 2.0)
+    normalized_distance = kendall_distance / total_pairs if total_pairs > 0 else kendall_distance
+    return {
+        "kendall_tau": kendall_tau.numpy(),
+        "kendall_distance": kendall_distance.numpy(),
+        "normalized_distance": normalized_distance.numpy(),
+        "total_pairs": float(total_pairs),
+        "sample_mode": sample_mode,
+        "num_orders_used": int(sampled_orders.size(0)),
+    }
+
+
 def save_figure_to_out_dir(fig, filename, dpi=200):
     os.makedirs(out_dir, exist_ok=True)
     save_path = os.path.join(out_dir, filename)
@@ -632,6 +719,30 @@ while True:
                 print(f"saved generate_step_block_loss_plot to {latest_plot_path}")
                 import matplotlib.pyplot as plt
                 plt.close(figure)
+            if eval_kendall_distance_log:
+                kendall_payload = estimate_sampled_order_kendall_distance_stats()
+                kendall_distance = np.asarray(kendall_payload["kendall_distance"], dtype=np.float64)
+                kendall_distance_normalized = np.asarray(
+                    kendall_payload["normalized_distance"],
+                    dtype=np.float64,
+                )
+                sample_mode = str(kendall_payload.get("sample_mode", "sampled_orders"))
+                log_payload["val/kendall_distance_sample_mode"] = sample_mode
+                log_payload["val/kendall_distance_sampled_mean"] = float(
+                    kendall_distance_normalized.mean()
+                )
+                log_payload["val/kendall_distance_sampled_raw_mean"] = float(
+                    kendall_distance.mean()
+                )
+                log_payload["val/kendall_distance_sampled_num_orders"] = int(
+                    kendall_payload.get("num_orders_used", 0)
+                )
+                print(
+                    "computed kendall_distance_sampled_mean="
+                    f"{log_payload['val/kendall_distance_sampled_mean']:.4f} "
+                    f"using {log_payload['val/kendall_distance_sampled_num_orders']} "
+                    f"orders ({sample_mode})"
+                )
             wandb.log(log_payload)
         val_loss_for_ckpt = losses['val']
         if val_loss_for_ckpt < best_val_loss or always_save_checkpoint:

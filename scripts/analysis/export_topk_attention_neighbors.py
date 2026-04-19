@@ -231,6 +231,24 @@ def map_neighbor_map_to_original(neighbor_map, block_perm):
     return mapped
 
 
+def annotate_neighbor_map_with_original(neighbor_map, block_perm):
+    annotated = {}
+    for block_idx_str, neighbors in neighbor_map.items():
+        block_idx = int(block_idx_str)
+        annotated[block_idx_str] = {
+            "block_current": block_idx,
+            "block_original": int(block_perm[block_idx].item()),
+            "neighbors": [
+                {
+                    **row,
+                    "neighbor_original": int(block_perm[int(row["neighbor"])].item()),
+                }
+                for row in neighbors
+            ],
+        }
+    return annotated
+
+
 def map_edge_rows_to_original(rows, block_perm):
     return [
         {
@@ -359,6 +377,10 @@ def main():
             "block_len": int(model.block_order_block_len),
             "num_attention_samples": int(total_samples),
             "batch_start_offsets_preview": batch_start_offsets[: min(32, len(batch_start_offsets))],
+            "permute_data": bool(checkpoint.get("config", {}).get("permute_data", False)),
+            "permute_mode": checkpoint.get("config", {}).get("permute_mode", ""),
+            "permute_seed": checkpoint.get("config", {}).get("permute_seed", None),
+            "output_coordinate_frame": "current_l2r",
         },
         "attention_topk": {
             "top_neighbors_per_block": neighbor_map,
@@ -377,21 +399,30 @@ def main():
             "block_perm": [int(v) for v in block_perm.tolist()],
             "inverse_block_perm": [int(v) for v in permutation_state["inverse_block_perm"].tolist()],
         }
+        payload["attention_topk"]["top_neighbors_per_block_with_original"] = (
+            annotate_neighbor_map_with_original(neighbor_map, block_perm)
+        )
         payload["attention_topk"]["top_neighbors_per_block_original"] = map_neighbor_map_to_original(
             neighbor_map,
             block_perm,
         )
-        payload["attention_topk"]["undirected_edges_original"] = map_edge_rows_to_original(
+        payload["attention_topk"]["undirected_edges_with_original"] = map_edge_rows_to_original(
             payload["attention_topk"]["undirected_edges"],
             block_perm,
         )
-        payload["attention_topk"]["directed_topk_pairs_original"] = map_edge_rows_to_original(
+        payload["attention_topk"]["directed_topk_pairs_with_original"] = map_edge_rows_to_original(
             directed_edges,
             block_perm,
         )
+        payload["attention_topk"]["undirected_edges_original"] = payload["attention_topk"][
+            "undirected_edges_with_original"
+        ]
+        payload["attention_topk"]["directed_topk_pairs_original"] = payload["attention_topk"][
+            "directed_topk_pairs_with_original"
+        ]
 
     if bool(args.save_attention_matrices):
-        payload["attention_topk"]["attention_matrix_original"] = attention_matrix.tolist()
+        payload["attention_topk"]["attention_matrix"] = attention_matrix.tolist()
         payload["attention_topk"]["attention_graph"] = attention_graph.tolist()
 
     save_json(args.out_dir / "results.json", payload)
